@@ -61,11 +61,9 @@ typedef enum {
     RIL_E_SIM_ABSENT = 11,                      /* fail to set the location where CDMA subscription 
                                                    shall be retrieved because of SIM or RUIM 
                                                    card absent */
-#ifdef FEATURE_MULTIMODE_ANDROID 
     RIL_E_SUBSCRIPTION_NOT_AVAILABLE = 12,      /* fail to find CDMA subscription from specified 
                                                    location */
     RIL_E_MODE_NOT_SUPPORTED = 13               /* HW does not support preferred network type */
-#endif 
 } RIL_Errno;
 
 typedef enum {
@@ -100,8 +98,7 @@ typedef struct {
   char signal;       /* as defined 3.7.5.5-3, 3.7.5.5-4 or 3.7.5.5-5 */
 } RIL_CDMA_SignalInfoRecord;
 
-// NEWRIL:TODO Remove #define NEWRIL and RIL_CallOld when we have the new ril
-#define NEWRIL 0
+#define NEWRIL 1
 #if !NEWRIL
 typedef struct {
     RIL_CallState   state;
