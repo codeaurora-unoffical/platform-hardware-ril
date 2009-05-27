@@ -2,6 +2,9 @@
 
 # XXX using libutils for simulator build only...
 #
+
+ifeq (, $(filter msm7501a_surf msm7501a_ffa, $(TARGET_PRODUCT)))
+
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
@@ -45,4 +48,6 @@ else
 	libril
   LOCAL_MODULE:= reference-ril
   include $(BUILD_EXECUTABLE)
+endif
+
 endif
