@@ -98,7 +98,6 @@ typedef struct {
   char signal;       /* as defined 3.7.5.5-3, 3.7.5.5-4 or 3.7.5.5-5 */
 } RIL_CDMA_SignalInfoRecord;
 
-#define NEWRIL 1
 #if !NEWRIL
 typedef struct {
     RIL_CallState   state;

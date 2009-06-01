@@ -5,6 +5,12 @@
 
 ifeq (, $(filter msm7501a_surf msm7501a_ffa, $(TARGET_PRODUCT)))
 
+ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+    LOCAL_CFLAGS += -DNEWRIL=1
+else
+    LOCAL_CFLAGS += -DNEWRIL=0
+endif
+
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
