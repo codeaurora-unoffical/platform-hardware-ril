@@ -13,6 +13,12 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_CFLAGS := 
 
+ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
+    LOCAL_CFLAGS += -DNEWRIL=1
+else
+    LOCAL_CFLAGS += -DNEWRIL=0
+endif
+
 LOCAL_MODULE:= libril
 
 LOCAL_LDLIBS += -lpthread
