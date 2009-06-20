@@ -64,6 +64,10 @@ namespace android {
 #define ANDROID_FULL_WAKE_LOCK_PATH "/sys/android_power/acquire_full_wake_lock"
 #define ANDROID_WAKE_UNLOCK_PATH "/sys/android_power/release_wake_lock"
 
+#define PARTIAL_WAKE_LOCK_PATH "/sys/power/wake_lock"
+#define FULL_WAKE_LOCK_PATH "/sys/power/wake_lock"
+#define WAKE_UNLOCK_PATH "/sys/power/wake_unlock"
+
 #define PROPERTY_RIL_IMPL "gsm.version.ril-impl"
 
 // match with constant in RIL.java
@@ -2395,11 +2399,14 @@ grabFullWakeLock()
 {
     int fd;
 
-    fd = open (ANDROID_FULL_WAKE_LOCK_PATH, O_WRONLY);
+    fd = open (FULL_WAKE_LOCK_PATH, O_WRONLY);
 
     if (fd < 0) {
-        LOGW ("Cannot open " ANDROID_FULL_WAKE_LOCK_PATH);
-        return;
+        fd = open(ANDROID_FULL_WAKE_LOCK_PATH, O_WRONLY);
+        if (fd < 0) {
+                LOGW ("Cannot open " FULL_WAKE_LOCK_PATH);
+                return;
+        }
     }
 
     write (fd, ANDROID_WAKE_LOCK_NAME, strlen(ANDROID_WAKE_LOCK_NAME));
@@ -2411,11 +2418,15 @@ grabPartialWakeLock()
 {
     int fd;
 
-    fd = open (ANDROID_PARTIAL_WAKE_LOCK_PATH, O_WRONLY);
+    fd = open (PARTIAL_WAKE_LOCK_PATH, O_WRONLY);
 
     if (fd < 0) {
-        LOGW ("Cannot open " ANDROID_PARTIAL_WAKE_LOCK_PATH);
-        return;
+        fd = open(ANDROID_PARTIAL_WAKE_LOCK_PATH, O_WRONLY);
+        if (fd < 0) {
+           LOGW ("Cannot open " PARTIAL_WAKE_LOCK_PATH);
+           return;
+        }
+
     }
 
     write (fd, ANDROID_WAKE_LOCK_NAME, strlen(ANDROID_WAKE_LOCK_NAME));
@@ -2427,11 +2438,15 @@ releaseWakeLock()
 {
     int fd;
 
-    fd = open (ANDROID_WAKE_UNLOCK_PATH, O_WRONLY);
+    fd = open (WAKE_UNLOCK_PATH, O_WRONLY);
 
     if (fd < 0) {
-        LOGW ("Cannot open " ANDROID_WAKE_UNLOCK_PATH);
-        return;
+        fd = open(ANDROID_WAKE_UNLOCK_PATH, O_WRONLY);
+        if (fd < 0) {
+             LOGW ("Cannot open " WAKE_UNLOCK_PATH);
+             return;
+        }
+
     }
 
     write (fd, ANDROID_WAKE_LOCK_NAME, strlen(ANDROID_WAKE_LOCK_NAME));
