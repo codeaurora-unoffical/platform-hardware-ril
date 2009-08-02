@@ -11,7 +11,7 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     libcutils
 
-LOCAL_CFLAGS := 
+LOCAL_CFLAGS :=
 
 ifeq ($(BOARD_USES_QCOM_HARDWARE),true)
     LOCAL_CFLAGS += -DNEWRIL=1
@@ -38,7 +38,7 @@ LOCAL_STATIC_LIBRARIES := \
     libutils_static \
     libcutils
 
-LOCAL_CFLAGS := 
+LOCAL_CFLAGS :=
 
 LOCAL_MODULE:= libril_static
 
