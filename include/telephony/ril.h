@@ -66,7 +66,8 @@ typedef enum {
                                                    card absent */
     RIL_E_SUBSCRIPTION_NOT_AVAILABLE = 12,      /* fail to find CDMA subscription from specified
                                                    location */
-    RIL_E_MODE_NOT_SUPPORTED = 13               /* HW does not support preferred network type */
+    RIL_E_MODE_NOT_SUPPORTED = 13,              /* HW does not support preferred network type */
+    RIL_E_FDN_CHECK_FAILURE = 14                /* command failed because recipient is not on FDN list */
 } RIL_Errno;
 
 typedef enum {
@@ -237,6 +238,8 @@ typedef enum {
     CALL_FAIL_ACM_LIMIT_EXCEEDED = 68,
     CALL_FAIL_CALL_BARRED = 240,
     CALL_FAIL_FDN_BLOCKED = 241,
+    CALL_FAIL_IMSI_UNKNOWN_IN_VLR = 242,
+    CALL_FAIL_IMEI_NOT_ACCEPTED = 243,
     CALL_FAIL_CDMA_LOCKED_UNTIL_POWER_CYCLE = 1000,
     CALL_FAIL_CDMA_DROP = 1001,
     CALL_FAIL_CDMA_INTERCEPT = 1002,
@@ -269,6 +272,13 @@ typedef enum {
     PDP_FAIL_REGISTRATION_FAIL = -1,
     PDP_FAIL_GPRS_REGISTRATION_FAIL = -2,
 } RIL_LastDataCallActivateFailCause;
+
+/* See RIL_REQUEST_SETUP_DATA_CALL */
+typedef enum {
+    RIL_DATA_PROFILE_DEFAULT    = 0,
+    RIL_DATA_PROFILE_TETHERED   = 1,
+    RIL_DATA_PROFILE_OEM_BASE   = 1000    /* Start of OEM-specific profiles */
+} RIL_DataProfile;
 
 /* Used by RIL_UNSOL_SUPP_SVC_NOTIFICATION */
 typedef struct {
@@ -617,13 +627,6 @@ typedef struct {
  * "data" is NULL
  *
  * "response" is const RIL_CardStatus *
-
- *
- * If the radio is off or unavailable, return RIL_SIM_NOT_READY
- *
- * Please note: RIL_SIM_READY means that the radio state
- * is RADIO_STATE_SIM_READY.   This is more than "+CPIN: READY".
- * It also means the radio is ready for SIM I/O
  *
  * Valid errors:
  *  Must never fail
@@ -633,7 +636,7 @@ typedef struct {
 /**
  * RIL_REQUEST_ENTER_SIM_PIN
  *
- * Supplies SIM PIN. Only called if SIM status is RIL_SIM_PIN
+ * Supplies SIM PIN. Only called if RIL_CardStatus has RIL_APPSTATE_PIN state
  *
  * "data" is const char **
  * ((const char **)data)[0] is PIN value
@@ -1031,7 +1034,7 @@ typedef struct {
  *                                  7 - EvDo Rev. 0, 8 - EvDo Rev. A
  * ((const char **)response)[4] is Base Station ID if registered on a CDMA
  *                              system or NULL if not.  Base Station ID in
- *                              hexadecimal format
+ *                              decimal format
  * ((const char **)response)[5] is Base Station latitude if registered on a
  *                              CDMA system or NULL if not. Base Station
  *                              latitude in hexadecimal format
@@ -1057,8 +1060,19 @@ typedef struct {
  *                               Valid values are 0-255.
  * ((const char **)response)[13] if registration state is 3 (Registration
  *                               denied) this is an enumerated reason why
- *                               registration was denied.
- *                                 0-General, 1-Authentication Failure
+ *                               registration was denied.  See 3GPP TS 24.008,
+ *                               10.5.3.6 and Annex G.
+ *                                 0 - General
+ *                                 1 - Authentication Failure
+ *                                 2 - IMSI unknown in HLR
+ *                                 3 - Illegal MS
+ *                                 4 - Illegal ME
+ *                                 5 - PLMN not allowed
+ *                                 6 - Location area not allowed
+ *                                 7 - Roaming not allowed
+ *                                 8 - No Suitable Cells in this Location Area
+ *                                 9 - Network failure
+ *                                10 - Persistent location update reject
  *
  * Please note that registration state 4 ("unknown") is treated
  * as "out of service" in the Android telephony system
@@ -1155,11 +1169,7 @@ typedef struct {
  * RIL_REQUEST_DTMF_START, that tone should be cancelled and the new tone
  * should be played instead
  *
- * "data" is a char *
- * ((char *)data)[0] is a single character with one of 12 values: 0-9,*,#
- * ((char *)data)[1] is a single character with one of 3 values:
- *    'S' -- tone should be played for a short time
- *    'L' -- tone should be played for a long time
+ * "data" is a char * containing a single character with one of 12 values: 0-9,*,#
  * "response" is NULL
  *
  * FIXME should this block/mute microphone?
@@ -1197,6 +1207,7 @@ typedef struct {
  *  SUCCESS
  *  RADIO_NOT_AVAILABLE
  *  SMS_SEND_FAIL_RETRY
+ *  FDN_CHECK_FAILURE
  *  GENERIC_FAILURE
  *
  * FIXME how do we specify TP-Message-Reference if we need to resend?
@@ -1243,7 +1254,7 @@ typedef struct {
  * ((const char **)data)[0] indicates whether to setup connection on radio technology CDMA
  *                              or GSM/UMTS, 0-1. 0 - CDMA, 1-GSM/UMTS
  *
- * ((const char **)data)[1] Profile Number or NULL to indicate default profile
+ * ((const char **)data)[1] is a RIL_DataProfile (support is optional)
  * ((const char **)data)[2] is the APN to connect to if radio technology is GSM/UMTS. This APN will
  *                          override the one in the profile. NULL indicates no APN overrride.
  * ((const char **)data)[3] is the username for APN, or NULL
@@ -1325,6 +1336,7 @@ typedef struct {
  * Valid errors:
  *  SUCCESS
  *  RADIO_NOT_AVAILABLE
+ *  FDN_CHECK_FAILURE
  *  GENERIC_FAILURE
  *
  * See also: RIL_REQUEST_CANCEL_USSD, RIL_UNSOL_ON_USSD
@@ -1686,10 +1698,6 @@ typedef struct {
  * RIL_REQUEST_SET_NETWORK_SELECTION_MANUAL
  *
  * Manually select a specified network.
- *
- * The radio baseband/RIL implementation is expected to fall back to
- * automatic selection mode if the manually selected network should go
- * out of range in the future.
  *
  * "data" is const char * specifying MCCMNC of network to select (eg "310170")
  * "response" is NULL
@@ -2275,7 +2283,7 @@ typedef struct {
  * ((int *)data)[0] is == 0 for GSM/WCDMA (WCDMA preferred)
  * ((int *)data)[0] is == 1 for GSM only
  * ((int *)data)[0] is == 2 for WCDMA only
- * ((int *)data)[0] is == 3 for GSM/WCDMA (auto mode)
+ * ((int *)data)[0] is == 3 for GSM/WCDMA (auto mode, according to PRL)
  * ((int *)data)[0] is == 4 for CDMA and EvDo (auto mode, according to PRL)
  * ((int *)data)[0] is == 5 for CDMA only
  * ((int *)data)[0] is == 6 for EvDo only
@@ -2522,8 +2530,12 @@ typedef struct {
  *
  * Send DTMF string
  *
- * "data" is const char *
- * ((const char *)data)[0] is a DTMF string
+ * "data" is const char **
+ * ((const char **)data)[0] is a DTMF string
+ * ((const char **)data)[1] is the DTMF ON length in milliseconds, or 0 to use
+ *                          default
+ * ((const char **)data)[2] is the DTMF OFF length in milliseconds, or 0 to use
+ *                          default
  *
  * "response" is NULL
  *
@@ -2715,8 +2727,10 @@ typedef struct {
  *
  * "response" is const char **
  * ((const char **)response)[0] is MDN if CDMA subscription is available
- * ((const char **)response)[1] is H_SID (Home SID) if CDMA subscription is available
- * ((const char **)response)[2] is H_NID (Home NID) if CDMA subscription is available
+ * ((const char **)response)[1] is a comma separated list of H_SID (Home SID) if
+ *                              CDMA subscription is available, in decimal format
+ * ((const char **)response)[2] is a comma separated list of H_NID (Home NID) if
+ *                              CDMA subscription is available, in decimal format
  * ((const char **)response)[3] is MIN (10 digits, MIN2+MIN1) if CDMA subscription is available
  * ((const char **)response)[4] is PRL version if CDMA subscription is available
  *
