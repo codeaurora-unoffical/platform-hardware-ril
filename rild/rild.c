@@ -84,8 +84,10 @@ static int make_argv(char * args, char ** argv)
  * Our group, cache, was set by init.
  */
 void switchUser() {
-    prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
-    setuid(AID_RADIO);
+   prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
+   gid_t groups[] = {AID_QCOM_ONCRPC};
+   setgroups(sizeof(groups)/sizeof(groups[0]), groups);
+   setuid(AID_RADIO);
 
     struct __user_cap_header_struct header;
     struct __user_cap_data_struct cap;
@@ -94,6 +96,7 @@ void switchUser() {
     cap.effective = cap.permitted = (1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW);
     cap.inheritable = 0;
     capset(&header, &cap);
+
 }
 
 int main(int argc, char **argv)
