@@ -232,6 +232,7 @@ typedef struct {
 
 /* See RIL_REQUEST_LAST_CALL_FAIL_CAUSE */
 typedef enum {
+    CALL_FAIL_UNOBTAINABLE_NUMBER = 1,
     CALL_FAIL_NORMAL = 16,
     CALL_FAIL_BUSY = 17,
     CALL_FAIL_CONGESTION = 34,
@@ -250,6 +251,7 @@ typedef enum {
     CALL_FAIL_CDMA_PREEMPTED = 1007,
     CALL_FAIL_CDMA_NOT_EMERGENCY = 1008, /* For non-emergency number dialed
                                             during emergency callback mode */
+    CALL_FAIL_CDMA_ACCESS_BLOCKED = 1009, /* CDMA network access probes blocked */
     CALL_FAIL_ERROR_UNSPECIFIED = 0xffff
 } RIL_LastCallFailCause;
 
