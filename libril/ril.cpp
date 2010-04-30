@@ -2822,7 +2822,6 @@ internalRequestTimedCallback (RIL_TimedCallback callback, void *param,
 
     p_info->p_callback = callback;
     p_info->userParam = param;
-
     if (relativeTime == NULL) {
         /* treat null parameter as a 0 relative time */
         memset (&myRelativeTime, 0, sizeof(myRelativeTime));
@@ -2840,41 +2839,26 @@ internalRequestTimedCallback (RIL_TimedCallback callback, void *param,
 }
 
 static void
-internalRemoveTimedCallback(void *ptr)
+internalRemoveTimedCallback(void *usercallbackinfo_ptr)
 {
     UserCallbackInfo *p_info;
-    struct ril_event *list;
-    struct ril_event *curr_ptr;
-
-    curr_ptr = (struct ril_event *)ril_timer_list();
-    list = curr_ptr->next;
-
-    if(list == NULL) {
-        return;
-    }
-
-    while(list != curr_ptr) {
-
-        p_info = (UserCallbackInfo *)list->param;
-        list = list->next;
-
-        if((int )(p_info->userParam) == (int)ptr) {
-            ril_timer_delete(&(p_info->event));
-            free(p_info);
-            break;
-        }
+    p_info = (UserCallbackInfo *)usercallbackinfo_ptr;
+    LOGI("remove timer callback event");
+    if(p_info) {
+        ril_timer_delete(&(p_info->event));
+        free(p_info);
     }
 }
 
-extern "C" void
+extern "C" void *
 RIL_requestTimedCallback (RIL_TimedCallback callback, void *param,
                                 const struct timeval *relativeTime) {
-    internalRequestTimedCallback (callback, param, relativeTime);
+   return internalRequestTimedCallback (callback, param, relativeTime);
 }
 
 extern "C" void
-RIL_removeTimedCallback ( void *token_id) {
-    internalRemoveTimedCallback(token_id);
+RIL_removeTimedCallback ( void *usercallbackinfo_ptr) {
+    internalRemoveTimedCallback(usercallbackinfo_ptr);
 }
 
 const char *

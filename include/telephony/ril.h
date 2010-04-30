@@ -3418,7 +3418,7 @@ struct RIL_Env {
      * soon as possible
      */
 
-    void (*RequestTimedCallback) (RIL_TimedCallback callback,
+    void* (*RequestTimedCallback) (RIL_TimedCallback callback,
                                    void *param, const struct timeval *relativeTime);
 };
 
@@ -3483,7 +3483,7 @@ void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
  * @param relativeTime a relative time value at which the callback is invoked
  */
 
-void RIL_requestTimedCallback (RIL_TimedCallback callback,
+void* RIL_requestTimedCallback (RIL_TimedCallback callback,
                                void *param, const struct timeval *relativeTime);
 
 /**
