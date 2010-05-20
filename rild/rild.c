@@ -52,7 +52,7 @@ extern void RIL_onRequestComplete(RIL_Token t, RIL_Errno e,
 extern void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
                                 size_t datalen);
 
-extern void* RIL_requestTimedCallback (RIL_TimedCallback callback,
+extern void RIL_requestTimedCallback (RIL_TimedCallback callback,
                                void *param, const struct timeval *relativeTime);
 
 
