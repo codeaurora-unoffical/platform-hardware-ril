@@ -1412,12 +1412,16 @@ static int responseDataCallList(Parcel &p, void *response, size_t responselen)
         writeStringToParcel(p, p_cur[i].type);
         writeStringToParcel(p, p_cur[i].apn);
         writeStringToParcel(p, p_cur[i].address);
-        appendPrintBuf("%s[cid=%d,%s,%s,%s,%s],", printBuf,
+        p.writeInt32(p_cur[i].radioTech);
+        p.writeInt32(p_cur[i].inactiveReason);
+        appendPrintBuf("%s[cid=%d,%s,%s,%s,%s,%d,%d],", printBuf,
             p_cur[i].cid,
             (p_cur[i].active==0)?"down":"up",
             (char*)p_cur[i].type,
             (char*)p_cur[i].apn,
-            (char*)p_cur[i].address);
+            (char*)p_cur[i].address,
+            p_cur[i].radioTech,
+            p_cur[i].inactiveReason);
     }
     removeLastChar;
     closeResponse;
@@ -3094,7 +3098,6 @@ requestToString(int request) {
         case RIL_REQUEST_REPORT_SMS_MEMORY_STATUS: return "REPORT_SMS_MEMORY_STATUS";
         case RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE: return "CDMA_GET_SUBSCRIPTION_SOURCE";
         case RIL_REQUEST_CDMA_PRL_VERSION: return "CDMA_PRL_VERSION";
-        case RIL_REQUEST_DATA_RADIO_TECH: return "DATA_RADIO_TECH";
         case RIL_REQUEST_DELETE_SMS_ON_SIM: return "DELETE_SMS_ON_SIM";
         case RIL_REQUEST_GSM_SMS_BROADCAST_ACTIVATION: return "GSM_SMS_BROADCAST_ACTIVATION";
         case RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING: return "REPORT_STK_SERVICE_IS_RUNNING";
@@ -3134,11 +3137,11 @@ requestToString(int request) {
         case RIL_UNSOL_OEM_HOOK_RAW: return "UNSOL_OEM_HOOK_RAW";
         case RIL_UNSOL_RINGBACK_TONE: return "UNSOL_RINGBACK_TONE";
         case RIL_UNSOL_VOICE_RADIO_TECH_CHANGED: return "RIL_UNSOL_VOICE_RADIO_TECH_CHANGED";
-        case RIL_UNSOL_DATA_RADIO_TECH_CHANGED: return "RIL_UNSOL_DATA_RADIO_TECH_CHANGED";
         case RIL_UNSOL_CDMA_PRL_CHANGED: return "UNSOL_CDMA_PRL_CHANGED";
         case RIL_UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED: return "UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED";
         case RIL_UNSOL_SUPP_SVC_NOTIFICATION: return "UNSOL_SUPP_SVC_NOTIFICATION";
         case RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED: return "RESPONSE_IMS_NETWORK_STATE_CHANGED";
+        case RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED: return "RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED";
 
         default: return "<unknown request>";
     }

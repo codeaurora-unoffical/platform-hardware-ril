@@ -119,7 +119,6 @@
     {RIL_REQUEST_REPORT_SMS_MEMORY_STATUS, dispatchInts, responseVoid},
     {RIL_REQUEST_REPORT_STK_SERVICE_IS_RUNNING, dispatchVoid, responseVoid},
     {RIL_REQUEST_VOICE_RADIO_TECH, dispatchVoid, responseInts},
-    {RIL_REQUEST_DATA_RADIO_TECH, dispatchVoid, responseInts},
     {RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE, dispatchVoid, responseInts},
     {RIL_REQUEST_CDMA_PRL_VERSION, dispatchVoid, responseStrings},
     {RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts},

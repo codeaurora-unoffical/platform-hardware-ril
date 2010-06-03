@@ -67,7 +67,8 @@ typedef enum {
     RIL_E_SUBSCRIPTION_NOT_AVAILABLE = 12,      /* fail to find CDMA subscription from specified
                                                    location */
     RIL_E_MODE_NOT_SUPPORTED = 13,              /* HW does not support preferred network type */
-    RIL_E_FDN_CHECK_FAILURE = 14                /* command failed because recipient is not on FDN list */
+    RIL_E_FDN_CHECK_FAILURE = 14,               /* command failed because recipient is not on FDN list */
+    RIL_E_SETUP_DATA_CALL_FAILURE = 15          /* data call setup failed with a reason */
 } RIL_Errno;
 
 typedef enum {
@@ -223,14 +224,13 @@ typedef struct {
 } RIL_Call;
 
 typedef struct {
-    int             cid;        /* Context ID */
-    int             active;     /* 0=inactive, 1=active/physical link down, 2=active/physical link up */
-    char *          type;       /* X.25, IP, IPV6, etc. */
-    char *          apn;
-    char *          address;
-    int             inactiveReason;/* An integer cause code defined in TS 24.008
-                                    * section 6.1.3.1.3 or close approximation.
-                                    * If data became inactive this field should indicate why.*/
+    int                 cid;        /* Context ID */
+    int                 active;     /* 0=inactive, 1=active/physical link down, 2=active/physical link up */
+    char *              type;       /* X.25, IP, IPV6, etc. */
+    char *              apn;
+    char *              address;
+    RIL_RadioTechnology     radioTech;     /* Radio Technology, this data call was setup on */
+    int                 inactiveReason;    /* RIL_DataCallActivateFailCause */
 } RIL_Data_Call_Response;
 
 typedef struct {
@@ -377,8 +377,13 @@ typedef enum {
     CALL_FAIL_ERROR_UNSPECIFIED = 0xffff
 } RIL_LastCallFailCause;
 
-/* See RIL_REQUEST_LAST_DATA_CALL_FAIL_CAUSE */
 typedef enum {
+    /* an integer cause code defined in TS 24.008
+       section 6.1.3.1.3 or close approximation.
+       If the implementation does not have access to the exact cause codes,
+       then it should return one of the following values,
+       as the UI layer needs to distinguish these
+       cases for error notification and potential retries. */
     PDP_FAIL_OPERATOR_BARRED = 0x08,               /* no retry */
     PDP_FAIL_INSUFFICIENT_RESOURCES = 0x1A,
     PDP_FAIL_MISSING_UKNOWN_APN = 0x1B,            /* no retry */
@@ -395,7 +400,17 @@ typedef enum {
     /* Not mentioned in the specification */
     PDP_FAIL_REGISTRATION_FAIL = -1,
     PDP_FAIL_GPRS_REGISTRATION_FAIL = -2,
-} RIL_LastDataCallActivateFailCause;
+    PDP_FAIL_SIGNAL_LOST = -3,
+    PDP_FAIL_PREF_RADIO_TECH_CHANGED = -4, /* preferred technology has changed, will retry */
+    PDP_FAIL_RADIO_POWER_OFF = -5,         /* data call was disconnected because radio was resetting,
+                                              powered off - no retry */
+    PDP_FAIL_TETHERED_CALL_ON = -6,         /* data call was disconnected because tethered mode was up
+                                              on same APN/data profile - no retry until tethered call
+                                              is off */
+    PDP_FAIL_IP_VERSION_NOT_SUPPORTED = -7,   /* IPV6 is not supported no network - no retry */
+    PDP_FAIL_MULTIPLE_PDP_NOT_SUPPORTED = -8, /* Multiple PDP is not supported in network - android might
+                                                 tear down existing call based on priority */
+} RIL_DataCallActivateFailCause;
 
 /* See RIL_REQUEST_SETUP_DATA_CALL */
 typedef enum {
@@ -1304,11 +1319,10 @@ typedef struct {
  * Setup a packet data connection.
  *
  * "data" is a const char **
- * ((const char **)data)[0] is a RIL_RadioTechnology. Indicates to setup connection on
- *                          this technology. This should match the technology type returned in
- *                          last RIL_REQUEST_DATA_RADIO_TECH request.
+ * ((const char **)data)[0] radio technology to setup the connection on
+                            0 - 3GPP, 1 - 3GPP2, 2 - Automatic
  * ((const char **)data)[1] is a RIL_DataProfile (support is optional)
- * ((const char **)data)[2] is the APN to connect to if radio technology is GSM/UMTS. This APN will
+ * ((const char **)data)[2] is the APN to connect to if radio technology is 3GPP/Automatic. This APN will
  *                          override the one in the profile. NULL indicates no APN overrride.
  * ((const char **)data)[3] is the username for APN, or NULL
  * ((const char **)data)[4] is the password for APN, or NULL
@@ -1317,6 +1331,8 @@ typedef struct {
  *                          1 => PAP may be performed; CHAP is never performed.
  *                          2 => CHAP may be performed; PAP is never performed.
  *                          3 => PAP / CHAP may be performed - baseband dependent.
+ * ((const char **)data [6] indicates IPV4/IPV6.
+                            0 - IPV4 only, 1 - IPV6 only
  *
  * "response" is a char **
  * ((char **)response)[0] indicating PDP CID, which is generated by RIL. This Connection ID is
@@ -1333,6 +1349,7 @@ typedef struct {
  *  SUCCESS
  *  RADIO_NOT_AVAILABLE
  *  GENERIC_FAILURE
+ *  SETUP_DATA_CALL_FAILURE "response" is a RIL_DataCallActivateFailCause
  *
  * See also: RIL_REQUEST_DEACTIVATE_DATA_CALL
  */
@@ -1942,11 +1959,14 @@ typedef struct {
 #define RIL_REQUEST_QUERY_CLIP 55
 
 /**
- * RIL_REQUEST_LAST_DATA_CALL_FAIL_CAUSE
+ * RIL_REQUEST_LAST_DATA_CALL_FAIL_CAUSE - DEPRECATED
  *
  * Requests the failure cause code for the most recently failed PDP
  * context or CDMA data connection active
  * replaces RIL_REQUEST_LAST_PDP_FAIL_CAUSE
+ *
+ * This function is deprecated in favor of returning the fail cause
+ * along with SETUP_DATA_CALL response.
  *
  * "data" is NULL
  *
@@ -2991,25 +3011,6 @@ typedef struct {
 #define RIL_REQUEST_VOICE_RADIO_TECH 104
 
 /**
- * RIL_REQUEST_DATA_RADIO_TECH
- *
- * Query the radio technology used for data. Query is valid only
- * when radio state is RADIO_STATE_ON. Callee will then invoke
- * RIL_REQUEST_SETUP_DATA_CALL with parameters appropriate for
- * the returned radio technology.
- *
- * "data" is NULL
- * "response" is int *
- * ((int *) response)[0] is of type const RIL_RadioTechnology
- *
- * Valid errors:
- *  SUCCESS
- *  RADIO_NOT_AVAILABLE
- *  GENERIC_FAILURE
- */
-#define RIL_REQUEST_DATA_RADIO_TECH 105
-
-/**
  * RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE
  *
  * Request to query the location where the CDMA subscription shall
@@ -3029,7 +3030,7 @@ typedef struct {
  *
  * See also: RIL_REQUEST_CDMA_SET_SUBSCRIPTION_SOURCE
  */
-#define RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE 106
+#define RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE 105
 
 /**
  * RIL_REQUEST_CDMA_PRL_VERSION
@@ -3046,7 +3047,7 @@ typedef struct {
  *
  * See also: RIL_UNSOL_CDMA_PRL_CHANGED
  */
-#define RIL_REQUEST_CDMA_PRL_VERSION 107
+#define RIL_REQUEST_CDMA_PRL_VERSION 106
 
 /**
  * RIL_REQUEST_IMS_REGISTRATION_STATE
@@ -3069,7 +3070,7 @@ typedef struct {
  *  RADIO_NOT_AVAILABLE
  *  GENERIC_FAILURE
  */
-#define RIL_REQUEST_IMS_REGISTRATION_STATE 108
+#define RIL_REQUEST_IMS_REGISTRATION_STATE 107
 
 /***********************************************************************/
 
@@ -3490,13 +3491,15 @@ typedef struct {
 #define RIL_UNSOL_VOICE_RADIO_TECH_CHANGED 1030
 
 /**
- * RIL_UNSOL_DATA_RADIO_TECH_CHANGED
+ * RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED
  *
- * Indicates that data technology has changed.
- * Callee will invoke the following requests on main thread: RIL_REQUEST_DATA_RADIO_TECH
+ * Called when tethered mode is enabled or disabled
+ *
+ *
+ * "data" is an int 0 - tethered mode off, 1 - tethered mode on
  *
  */
-#define RIL_UNSOL_DATA_RADIO_TECH_CHANGED 1031
+#define RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED 1031
 
 /**
  * RIL_UNSOL_RESPONSE_DATA_NETWORK_STATE_CHANGED

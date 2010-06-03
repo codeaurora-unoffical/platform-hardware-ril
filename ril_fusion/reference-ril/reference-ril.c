@@ -1968,16 +1968,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
                     RIL_onRequestComplete(t, RIL_E_SUCCESS, &techfam, sizeof(&techfam));
             }
             break;
-        case RIL_REQUEST_DATA_RADIO_TECH:
-            {
-                int reply = techFamilyFromModemType(TECH(sMdmInfo));
-                if (reply != -1) {
-                    RIL_onRequestComplete(t, RIL_E_SUCCESS, &reply, sizeof(int));
-                } else {
-                    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
-                }
-            }
-            break;
 
         case RIL_REQUEST_CDMA_PRL_VERSION:
         case RIL_REQUEST_IMS_REGISTRATION_STATE:
@@ -2102,7 +2092,6 @@ setRadioTechnology(ModemInfo *mdm, int newtech)
         if (techFamilyFromModemType(newtech) != techFamilyFromModemType(oldtech)) {
             RIL_onUnsolicitedResponse(RIL_UNSOL_VOICE_RADIO_TECH_CHANGED, NULL, 0);
         }
-        RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_RADIO_TECH_CHANGED, NULL, 0);
     }
 }
 
