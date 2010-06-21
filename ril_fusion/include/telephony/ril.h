@@ -32,6 +32,7 @@
 #define ANDROID_RIL_H 1
 
 #include <stdlib.h>
+#include <telephony/ril_cdma_sms.h>
 #ifndef FEATURE_UNIT_TEST
 #include <sys/time.h>
 #endif /* !FEATURE_UNIT_TEST */
@@ -232,6 +233,19 @@ typedef struct {
     RIL_RadioTechnology     radioTech;     /* Radio Technology, this data call was setup on */
     int                 inactiveReason;    /* RIL_DataCallActivateFailCause */
 } RIL_Data_Call_Response;
+
+
+typedef struct {
+    RIL_RadioTechnologyFamily tech;
+
+    union {
+        /* Valid field if tech is RADIO_TECH_3GPP2. See RIL_REQUEST_CDMA_SEND_SMS */
+        RIL_CDMA_SMS_Message* cdmaMessage;
+
+        /* Valid field if tech is RADIO_TECH_3GPP. See RIL_REQUEST_SEND_SMS */
+        char**                gsmMessage;
+    } message;
+} RIL_IMS_SMS_Message;
 
 typedef struct {
     int messageRef;   /* TP-Message-Reference for GSM,
@@ -3071,6 +3085,33 @@ typedef struct {
  *  GENERIC_FAILURE
  */
 #define RIL_REQUEST_IMS_REGISTRATION_STATE 107
+
+/**
+ * RIL_REQUEST_IMS_SEND_SMS
+ *
+ * Send a SMS message over IMS
+ *
+ * "data" is const RIL_IMS_SMS_Message *
+ *
+ * "response" is a const RIL_SMS_Response *
+ *
+ * Based on the return error, caller decides to resend if sending sms
+ * fails.
+ * SUCCESS is error class 0 (no error)
+ * SMS_SEND_FAIL_RETRY will cause re-send using RIL_REQUEST_CDMA_SEND_SMS
+ *   or RIL_REQUEST_SEND_SMS based on Voice Technology available.
+ * and GENERIC_FAILURE means no retry.
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE
+ *  SMS_SEND_FAIL_RETRY
+ *  FDN_CHECK_FAILURE
+ *  GENERIC_FAILURE
+ *
+ */
+#define RIL_REQUEST_IMS_SEND_SMS 108
+
 
 /***********************************************************************/
 

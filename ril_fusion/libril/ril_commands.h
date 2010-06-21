@@ -122,3 +122,4 @@
     {RIL_REQUEST_CDMA_GET_SUBSCRIPTION_SOURCE, dispatchVoid, responseInts},
     {RIL_REQUEST_CDMA_PRL_VERSION, dispatchVoid, responseStrings},
     {RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts},
+    {RIL_REQUEST_IMS_SEND_SMS, dispatchImsSms, responseSMS},
