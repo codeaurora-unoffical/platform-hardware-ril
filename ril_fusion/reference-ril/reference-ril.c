@@ -1171,8 +1171,7 @@ error:
     return -1;
 }
 
-#define LEN_3GPP2 14
-#define LEN_3GPP 4
+#define REG_STATE_LEN 14
 static void requestRegistrationState(int request, void *data,
                                         size_t datalen, RIL_Token t)
 {
@@ -1218,7 +1217,7 @@ static void requestRegistrationState(int request, void *data,
             LOGD("registration state type: 3GPP2");
             // TODO: Query modem
             startfrom = 3;
-            numElements = LEN_3GPP2;
+            numElements = REG_STATE_LEN;
             responseStr = response.records[i].regState = calloc(numElements,sizeof(char *));
             asprintf(&responseStr[3], "8");     // EvDo revA
             asprintf(&responseStr[4], "1");     // BSID
@@ -1233,8 +1232,8 @@ static void requestRegistrationState(int request, void *data,
             asprintf(&responseStr[13], "0");    // Reason for denial
         } else { // type == RADIO_TECH_3GPP
             LOGD("registration state type: 3GPP");
-            if (numElements > LEN_3GPP)
-                numElements = LEN_3GPP;
+            if (numElements > REG_STATE_LEN)
+                numElements = REG_STATE_LEN;
             responseStr = response.records[i].regState = calloc(numElements,sizeof(char *));
             startfrom = 0;
             asprintf(&responseStr[1], "%x", registration[1]);
@@ -1255,8 +1254,10 @@ static void requestRegistrationState(int request, void *data,
     for (i = 0; i < RIL_MAX_NETWORKS; i++) {
         for (j = 0; j < response.records[i].numElements; j++ ) {
             free(response.records[i].regState[j]);
+            response.records[i].regState[j] = NULL;
         }
         free(response.records[i].regState);
+        response.records[i].regState = NULL;
     }
     at_response_free(p_response);
 
@@ -1265,9 +1266,11 @@ error:
     for (i = 0; i < RIL_MAX_NETWORKS; i++) {
         if (response.records[i].regState) {
             for (j = 0; j < response.records[i].numElements; j++) {
-                free(response.records[i].regState);
+                free(response.records[i].regState[j]);
+                response.records[i].regState[j] = NULL;
             }
             free(response.records[i].regState);
+            response.records[i].regState = NULL;
         }
     }
     LOGE("requestRegistrationState must never return an error when radio is on");
