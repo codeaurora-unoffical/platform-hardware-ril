@@ -1589,14 +1589,12 @@ static void  requestEnterSimPin(void*  data, size_t  datalen, RIL_Token  t)
     ATResponse   *p_response = NULL;
     int           err;
     char*         cmd = NULL;
-    const char**  strings = (const char**)data;;
+    RIL_SimPin*   sp = (RIL_SimPin *)data;
 
-    if ( datalen == sizeof(char*) ) {
-        asprintf(&cmd, "AT+CPIN=%s", strings[0]);
-    } else if ( datalen == 2*sizeof(char*) ) {
-        asprintf(&cmd, "AT+CPIN=%s,%s", strings[0], strings[1]);
-    } else
+    if (datalen < sizeof(RIL_SimPin)) {
         goto error;
+    }
+    asprintf(&cmd, "AT+CPIN=%s", sp->pin);
 
     err = at_send_command_singleline(cmd, "+CPIN:", &p_response);
     free(cmd);
@@ -1610,6 +1608,53 @@ error:
     at_response_free(p_response);
 }
 
+static void  requestEnterSimPuk(void*  data, size_t  datalen, RIL_Token  t)
+{
+    ATResponse   *p_response = NULL;
+    int           err;
+    char*         cmd = NULL;
+    RIL_SimPuk*   sp = (RIL_SimPuk *)data;
+
+    if (datalen < sizeof(RIL_SimPuk)) {
+        goto error;
+    }
+    asprintf(&cmd, "AT+CPIN=%s,%s", sp->puk,sp->newPin);
+
+    err = at_send_command_singleline(cmd, "+CPIN:", &p_response);
+    free(cmd);
+
+    if (err < 0 || p_response->success == 0) {
+error:
+        RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+    at_response_free(p_response);
+}
+
+static void  requestSimPinSet(void*  data, size_t  datalen, RIL_Token  t)
+{
+    ATResponse   *p_response = NULL;
+    int           err;
+    char*         cmd = NULL;
+    RIL_SimPinSet*   sps = (RIL_SimPinSet *)data;
+
+    if (datalen < sizeof(RIL_SimPinSet)) {
+        goto error;
+    }
+    asprintf(&cmd, "AT+CPIN=%s,%s", sps->pin, sps->newPin);
+
+    err = at_send_command_singleline(cmd, "+CPIN:", &p_response);
+    free(cmd);
+
+    if (err < 0 || p_response->success == 0) {
+error:
+        RIL_onRequestComplete(t, RIL_E_PASSWORD_INCORRECT, NULL, 0);
+    } else {
+        RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    }
+    at_response_free(p_response);
+}
 
 static void  requestSendUSSD(void *data, size_t datalen, RIL_Token t)
 {
@@ -1951,12 +1996,18 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         }
 
         case RIL_REQUEST_ENTER_SIM_PIN:
-        case RIL_REQUEST_ENTER_SIM_PUK:
         case RIL_REQUEST_ENTER_SIM_PIN2:
+            requestEnterSimPin(data, datalen, t);
+            break;
+
+        case RIL_REQUEST_ENTER_SIM_PUK:
         case RIL_REQUEST_ENTER_SIM_PUK2:
+            requestEnterSimPuk(data, datalen, t);
+            break;
+
         case RIL_REQUEST_CHANGE_SIM_PIN:
         case RIL_REQUEST_CHANGE_SIM_PIN2:
-            requestEnterSimPin(data, datalen, t);
+            requestSimPinSet(data, datalen, t);
             break;
 
         case RIL_REQUEST_VOICE_RADIO_TECH:

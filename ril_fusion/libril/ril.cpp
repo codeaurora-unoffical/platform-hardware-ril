@@ -200,6 +200,12 @@ static void dispatchSIM_IO (Parcel& p, RequestInfo *pRI);
 static void dispatchCallForward(Parcel& p, RequestInfo *pRI);
 static void dispatchRaw(Parcel& p, RequestInfo *pRI);
 static void dispatchSmsWrite (Parcel &p, RequestInfo *pRI);
+static void dispatchRequestImsi(Parcel &p, RequestInfo *pRI);
+static void dispatchSimPin(Parcel &p, RequestInfo *pRI);
+static void dispatchSimPuk(Parcel &p, RequestInfo *pRI);
+static void dispatchSimPinSet(Parcel &p, RequestInfo *pRI);
+
+
 
 static void dispatchCdmaSms(Parcel &p, RequestInfo *pRI);
 static void dispatchCdmaSmsAck(Parcel &p, RequestInfo *pRI);
@@ -1140,6 +1146,238 @@ invalid:
     return;
 
 }
+
+/**
+* Callee expects const RIL_RequestImsi *
+* Payload is:
+*   int32_t slot
+*   String aidPtr
+*/
+static void
+dispatchRequestImsi(Parcel &p, RequestInfo *pRI) {
+    RIL_RequestImsi getImsi;
+    int32_t t;
+    status_t status;
+
+    memset (&getImsi, 0, sizeof(getImsi));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    getImsi.slot = (int)t;
+
+    getImsi.aid_ptr = strdupReadString(p);
+
+    startRequest;
+    appendPrintBuf("%sslot=%d,aid=%s",
+        printBuf, simIO.slot, simIO.aidPtr);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &getImsi, sizeof(getImsi), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString (getImsi.aid_ptr);
+#endif
+
+    free (getImsi.aid_ptr);
+
+#ifdef MEMSET_FREED
+    memset(&getImsi, 0, sizeof(getImsi));
+#endif
+
+    return;
+invalid:
+    free (getImsi.aid_ptr);
+    invalidCommandBlock(pRI);
+    return;
+}
+
+
+/**
+* Callee expects const RIL_SimPin *
+* Payload is:
+*   int32_t slot
+*   String aidPtr
+*   String Pin
+*/
+static void
+dispatchSimPin(Parcel &p, RequestInfo *pRI) {
+    RIL_SimPin simPin;
+    int32_t t;
+    status_t status;
+
+    memset (&simPin, 0, sizeof(simPin));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    simPin.slot = (int)t;
+
+    simPin.aidPtr = strdupReadString(p);
+    simPin.pin= strdupReadString(p);
+
+
+    startRequest;
+    appendPrintBuf("%sslot=%d,aid=%s,pin=****",
+        printBuf, simPin.slot, simPin.aidPtr);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &simPin, sizeof(simPin), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString(simPin.aidPtr);
+    memsetString(simPin.pin);
+#endif
+
+    free(simPin.aidPtr);
+    free(simPin.pin);
+
+#ifdef MEMSET_FREED
+    memset(&simPin, 0, sizeof(simPin));
+#endif
+
+    return;
+invalid:
+    free(simPin.aidPtr);
+    free(simPin.pin);
+    invalidCommandBlock(pRI);
+    return;
+}
+
+
+/**
+* Callee expects const RIL_SimPuk *
+* Payload is:
+*   int32_t slot
+*   String aidPtr
+*   String puk
+*   String newPin
+*/
+static void
+dispatchSimPuk(Parcel &p, RequestInfo *pRI) {
+    RIL_SimPuk simPuk;
+    int32_t t;
+    status_t status;
+
+    memset (&simPuk, 0, sizeof(simPuk));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    simPuk.slot = (int)t;
+
+    simPuk.aidPtr = strdupReadString(p);
+    simPuk.puk= strdupReadString(p);
+    simPuk.newPin= strdupReadString(p);
+
+
+    startRequest;
+    appendPrintBuf("%sslot=%d,aid=%s,puk=****,new_pin=****",
+        printBuf, simPuk.slot, simPuk.aidPtr);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &simPuk, sizeof(simPuk), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString(simPuk.aidPtr);
+    memsetString(simPuk.puk);
+    memsetString(simPuk.newPin);
+#endif
+
+    free(simPuk.aidPtr);
+    free(simPuk.puk);
+    free(simPuk.newPin);
+
+#ifdef MEMSET_FREED
+    memset(&simPuk, 0, sizeof(simPuk));
+#endif
+
+    return;
+invalid:
+    free(simPuk.aidPtr);
+    free(simPuk.puk);
+    free(simPuk.newPin);
+    invalidCommandBlock(pRI);
+    return;
+}
+
+
+/**
+* Callee expects const RIL_SimPinSet *
+* Payload is:
+*   int32_t slot
+*   String aidPtr
+*   String pin
+*   String newPin
+*/
+static void
+dispatchSimPinSet(Parcel &p, RequestInfo *pRI) {
+    RIL_SimPinSet simPinSet;
+    int32_t t;
+    status_t status;
+
+    memset (&simPinSet, 0, sizeof(simPinSet));
+
+    // note we only check status at the end
+
+    status = p.readInt32(&t);
+    simPinSet.slot = (int)t;
+
+    simPinSet.aidPtr = strdupReadString(p);
+    simPinSet.pin= strdupReadString(p);
+    simPinSet.newPin= strdupReadString(p);
+
+
+    startRequest;
+    appendPrintBuf("%sslot=%d,aid=%s,puk=****,new_pin=****",
+        printBuf, simPinSet.slot, simPinSet.aidPtr);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &simPinSet, sizeof(simPinSet), pRI);
+
+#ifdef MEMSET_FREED
+    memsetString(simPinSet.aidPtr);
+    memsetString(simPinSet.pin);
+    memsetString(simPinSet.newPin);
+#endif
+
+    free(simPinSet.aidPtr);
+    free(simPinSet.pin);
+    free(simPinSet.newPin);
+
+#ifdef MEMSET_FREED
+    memset(&simPinSet, 0, sizeof(simPinSet));
+#endif
+
+    return;
+invalid:
+    free(simPinSet.aidPtr);
+    free(simPinSet.pin);
+    free(simPinSet.newPin);
+    invalidCommandBlock(pRI);
+    return;
+}
+
 
 static int
 blockingWrite(int fd, const void *buffer, size_t len) {
