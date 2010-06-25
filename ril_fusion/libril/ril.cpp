@@ -1170,7 +1170,7 @@ dispatchRequestImsi(Parcel &p, RequestInfo *pRI) {
 
     startRequest;
     appendPrintBuf("%sslot=%d,aid=%s",
-        printBuf, simIO.slot, simIO.aidPtr);
+        printBuf, getImsi.slot, getImsi.aid_ptr);
     closeRequest;
     printRequest(pRI->token, pRI->pCI->requestNumber);
 
