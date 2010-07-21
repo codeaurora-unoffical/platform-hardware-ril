@@ -3664,6 +3664,19 @@ typedef struct {
  */
 #define RIL_UNSOL_RESPONSE_IMS_NETWORK_STATE_CHANGED 1036
 
+/**
+ * RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE
+ *
+ * Called when data network states has changed
+ *
+ * Indicates that the radio system selection module has
+ * exited emergency callback mode.
+ *
+ * "data" is NULL
+ *
+ */
+#define RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE 1037
+
 
 /***********************************************************************/
 
