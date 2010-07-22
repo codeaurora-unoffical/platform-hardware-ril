@@ -1737,6 +1737,21 @@ static void  requestSendUSSD(void *data, size_t datalen, RIL_Token t)
 
 }
 
+static void requestExitEmergencyMode(void *data, size_t datalen, RIL_Token t)
+{
+    int err;
+    ATResponse *p_response = NULL;
+
+    err = at_send_command("AT+WSOS=0", &p_response);
+
+    if (err < 0 || p_response->success == 0) {
+        RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+        return;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+}
+
 static int techFamilyFromModemType(int mdmtype)
 {
     int ret = -1;
@@ -2170,6 +2185,12 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
         case RIL_REQUEST_CDMA_SET_ROAMING_PREFERENCE:
             if (TECH_BIT(sMdmInfo) == MDM_CDMA) {
                 requestCdmaSetRoamingPreference(request, data, datalen, t);
+                break;
+            }
+
+        case RIL_REQUEST_EXIT_EMERGENCY_CALLBACK_MODE:
+            if (TECH_BIT(sMdmInfo) == MDM_CDMA) {
+                requestExitEmergencyMode(data, datalen, t);
                 break;
             }
 
@@ -2875,6 +2896,30 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
         }
     } else if (strStartsWith(s, "+CCSS: ")) {
         RIL_onUnsolicitedResponse(RIL_UNSOL_CDMA_SUBSCRIPTION_SOURCE_CHANGED, NULL, 0);
+    } else if (strStartsWith(s, "+WSOS: ")) {
+        char state = 0;
+        int unsol;
+        line = p = strdup(s);
+        if (!line) {
+            LOGE("+WSOS: Unable to allocate memory");
+            return;
+        }
+        if (at_tok_start(&p) < 0) {
+            free(line);
+            return;
+        }
+        if (at_tok_nextbool(&p, &state) < 0) {
+            LOGE("invalid +WSOS response: %s", line);
+            free(line);
+            return;
+        }
+        free(line);
+
+        unsol = state ?
+                RIL_UNSOL_ENTER_EMERGENCY_CALLBACK_MODE : RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE;
+
+        RIL_onUnsolicitedResponse(unsol, NULL, 0);
+
     } else if (strStartsWith(s, "+CFUN: 0")) {
         setRadioState(RADIO_STATE_OFF);
     }
