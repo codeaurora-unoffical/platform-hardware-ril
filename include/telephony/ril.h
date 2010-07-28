@@ -3107,8 +3107,8 @@ typedef struct {
  *
  * Request the PRL (preferred roaming list) version.
  *
- * "response" is const char **
- * ((const char **)response)[0] is PRL version if PRL is loaded and NULL if not
+ * "response" is const char *
+ * (const char *)response is PRL version if PRL is loaded and NULL if not
  *
  * Valid errors:
  *  SUCCESS
