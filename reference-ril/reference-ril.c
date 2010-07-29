@@ -867,6 +867,30 @@ static void requestGetPreferredNetworkType(int request, void *data,
 
 }
 
+static void requestCdmaPrlVersion(int request, void *data,
+                                   size_t datalen, RIL_Token t)
+{
+    int err;
+    char * responseStr;
+    ATResponse *p_response = NULL;
+    const char *cmd;
+    char *line;
+
+    err = at_send_command_singleline("AT+WPRL?", "+WPRL:", &p_response);
+    if (err < 0 || !p_response->success) goto error;
+    line = p_response->p_intermediates->line;
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+    err = at_tok_nextstr(&line, &responseStr);
+    if (err < 0 || !responseStr) goto error;
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, strlen(responseStr));
+    at_response_free(p_response);
+    return;
+error:
+    at_response_free(p_response);
+    RIL_onRequestComplete(t, RIL_E_GENERIC_FAILURE, NULL, 0);
+}
+
 static void requestCdmaBaseBandVersion(int request, void *data,
                                    size_t datalen, RIL_Token t)
 {
@@ -885,6 +909,7 @@ static void requestCdmaBaseBandVersion(int request, void *data,
     RIL_onRequestComplete(t, RIL_E_SUCCESS, responseStr, sizeof(responseStr));
     free(responseStr);
 }
+
 static void requestCdmaDeviceIdentity(int request, void *data,
                                         size_t datalen, RIL_Token t)
 {
@@ -2115,7 +2140,6 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             }
             break;
 
-        case RIL_REQUEST_CDMA_PRL_VERSION:
         case RIL_REQUEST_IMS_REGISTRATION_STATE:
         {
             int reply[2];
@@ -2146,6 +2170,13 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
             break;
 
         /* CDMA Specific Requests */
+        case RIL_REQUEST_CDMA_PRL_VERSION:
+        {
+            if (TECH_BIT(sMdmInfo) == MDM_CDMA) {
+                requestCdmaPrlVersion(request, data, datalen, t);
+                break;
+            }
+        }
         case RIL_REQUEST_BASEBAND_VERSION:
             if (TECH_BIT(sMdmInfo) == MDM_CDMA) {
                 requestCdmaBaseBandVersion(request, data, datalen, t);
@@ -2920,6 +2951,25 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
 
         RIL_onUnsolicitedResponse(unsol, NULL, 0);
 
+    } else if (strStartsWith(s, "+WPRL: ")) {
+        int version = -1;
+        line = p = strdup(s);
+        if (!line) {
+            LOGE("+WPRL: Unable to allocate memory");
+            return;
+        }
+        if (at_tok_start(&p) < 0) {
+            LOGE("invalid +WPRL response: %s", s);
+            free(line);
+            return;
+        }
+        if (at_tok_nextint(&p, &version) < 0) {
+            LOGE("invalid +WPRL response: %s", s);
+            free(line);
+            return;
+        }
+        free(line);
+        RIL_onUnsolicitedResponse(RIL_UNSOL_CDMA_PRL_CHANGED, &version, sizeof(version));
     } else if (strStartsWith(s, "+CFUN: 0")) {
         setRadioState(RADIO_STATE_OFF);
     }
