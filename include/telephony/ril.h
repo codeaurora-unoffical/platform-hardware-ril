@@ -65,13 +65,14 @@ typedef enum {
     RIL_E_SIM_ABSENT = 11,                      /* fail to set the location where CDMA subscription
                                                    shall be retrieved because of SIM or RUIM
                                                    card absent */
-    RIL_E_SUBSCRIPTION_NOT_AVAILABLE = 12,      /* fail to find CDMA subscription from specified
+    RIL_E_SUBSCRIPTION_NOT_AVAILABLE = 12,      /* fail to find subscription from specified
                                                    location */
     RIL_E_MODE_NOT_SUPPORTED = 13,              /* HW does not support preferred network type */
     RIL_E_FDN_CHECK_FAILURE = 14,               /* command failed because recipient is not on FDN list */
     RIL_E_ILLEGAL_SIM_OR_ME = 15,               /* network selection failed due to
                                                    illegal SIM or ME */
-    RIL_E_SETUP_DATA_CALL_FAILURE = 16          /* data call setup failed with a reason */
+    RIL_E_SETUP_DATA_CALL_FAILURE = 16,          /* data call setup failed with a reason */
+    RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 17       /* Subscription not supported by RIL */
 } RIL_Errno;
 
 typedef enum {
@@ -497,12 +498,14 @@ typedef struct {
 } RIL_SuppSvcNotification;
 
 #define RIL_CARD_MAX_APPS     8
-#define RIL_MAX_CARDS         1
+#define RIL_MAX_CARDS         2
 
 typedef enum {
     RIL_CARDSTATE_ABSENT   = 0,
     RIL_CARDSTATE_PRESENT  = 1,
-    RIL_CARDSTATE_ERROR    = 2
+    RIL_CARDSTATE_ERROR    = 2,
+    RIL_CARDSTATE_NOT_INITIALIZED = 3 /* Card is being initialized, Telephony layer should wait till
+                                         the state becomes ABSENT/ERROR/PRESENT */
 } RIL_CardState;
 
 typedef enum {
@@ -593,6 +596,8 @@ typedef struct
   int           subscription_3gpp2_app_index[RIL_CARD_MAX_APPS]; /* value < RIL_CARD_MAX_APPS */
   int           num_applications;                /* value <= RIL_CARD_MAX_APPS */
   RIL_AppStatus applications[RIL_CARD_MAX_APPS];
+  int           slot;                           /* unique slot id indicating the sim card on the phone */
+                                                /* 0, 1, ... etc. */
 } RIL_CardStatus;
 
 typedef struct
@@ -840,6 +845,25 @@ typedef struct {
   char numberOfInfoRecs;
   RIL_CDMA_InformationRecord infoRec[RIL_CDMA_MAX_NUMBER_OF_INFO_RECS];
 } RIL_CDMA_InformationRecords;
+
+typedef enum {
+  RIL_UICC_SUBSCRIPTION_ACTIVATE = 0,
+  RIL_UICC_SUBSCRIPTION_DEACTIVATE = 1
+} RIL_UiccSubActStatus;
+
+typedef enum {
+  RIL_SUBSCRIPTION_0 = 0,
+  RIL_SUBSCRIPTION_1 = 1
+} RIL_Subscription;
+
+typedef struct {
+  int   slot;                   /* 0, 1, ... etc. */
+  int   app_index;              /* array subscriptor from applications[RIL_CARD_MAX_APPS] in
+                                   RIL_REQUEST_GET_SIM_STATUS */
+  RIL_Subscription sub_num;     /* Indicates subscription 0 or subscription 1 */
+  RIL_UiccSubActStatus  act_status;
+} RIL_SelectUiccSub;
+
 
 /**
  * RIL_REQUEST_GET_SIM_STATUS
@@ -3172,6 +3196,102 @@ typedef struct {
  */
 #define RIL_REQUEST_IMS_SEND_SMS 108
 
+/**
+ * RIL_REQUEST_SET_UICC_SUBSCRIPTION_SOURCE
+ *
+ * Selects/deselects a particular application/subscription to use on a particular SIM card
+ * "data" is const  RIL_SelectUiccSub*
+ *
+ * "response" is NULL
+ *
+ *  Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE (radio resetting)
+ *  GENERIC_FAILURE
+ *  SUBSCRIPTION_NOT_AVAILABLE
+ *  SUBSCRIPTION_NOT_SUPPORTED
+ *
+ */
+# define RIL_REQUEST_SET_UICC_SUBSCRIPTION_SOURCE  109
+
+/**
+ *  RIL_REQUEST_SET_DATA_SUBSCRIPTION_SOURCE
+ *
+ *  Selects a subscription for data call setup
+ * "data" is NULL
+ *
+ * "response" is NULL
+ *
+ *  Valid errors:
+ *
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE (radio resetting)
+ *  GENERIC_FAILURE
+ *  SUBSCRIPTION_NOT_AVAILABLE
+ *
+ */
+#define RIL_REQUEST_SET_DATA_SUBSCRIPTION_SOURCE  110
+
+/**
+ * RIL_REQUEST_GET_UICC_SUBSCRIPTION_SOURCE
+ *
+ * Request to query the UICC subscription info
+ * that is currently set.
+ *
+ * "data" is NULL
+ *
+ * "response" is const RIL_SelectUiccSub *
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE
+ *  GENERIC_FAILURE
+ *  SUBSCRIPTION_NOT_AVAILABLE
+ *
+ */
+#define RIL_REQUEST_GET_UICC_SUBSCRIPTION_SOURCE 111
+
+/**
+ * RIL_REQUEST_GET_DATA_SUBSCRIPTION_SOURCE
+ *
+ * Request to query the Data subscription info
+ * that is currently set.
+ *
+ * "data" is NULL
+ *
+ * "response" is int *
+ * ((int *)data)[0] is == 0  Indicates data is active on subscription 0
+ * ((int *)data)[0] is == 1  Indicates data is active on subscription 1
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE
+ *  GENERIC_FAILURE
+ *  SUBSCRIPTION_NOT_AVAILABLE
+ *
+ */
+#define RIL_REQUEST_GET_DATA_SUBSCRIPTION_SOURCE 112
+
+/**
+ *  RIL_REQUEST_SET_SUBSCRIPTION_MODE
+ *
+ *  Sets the SUBSCRIPTION_MODE to DualStandBy/SingleStandBy
+ * "data" is const int *
+ * ((const int *)data) [0]    1 indicates SingleStandBy Mode
+                              2 indicates DualStandBy Mode
+ *
+ * "response" is NULL
+ *
+ *  Valid errors:
+ *
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE (radio resetting)
+ *  GENERIC_FAILURE
+ *  SUBSCRIPTION_NOT_AVAILABLE
+ *
+ */
+
+#define RIL_REQUEST_SET_SUBSCRIPTION_MODE 113
 
 /***********************************************************************/
 
@@ -3833,9 +3953,11 @@ void RIL_onRequestComplete(RIL_Token t, RIL_Errno e,
  * @param datalen the length of data in byte
  */
 
-void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
+void RIL_onUnsolicitedResponse_Inst0(int unsolResponse, const void *data,
                                 size_t datalen);
 
+void RIL_onUnsolicitedResponse_Inst1(int unsolResponse, const void *data,
+                                size_t datalen);
 
 /**
  * Call user-specifed "callback" function on on the same thread that

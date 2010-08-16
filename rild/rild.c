@@ -1,6 +1,7 @@
 /* //device/system/rild/rild.c
 **
 ** Copyright 2006, The Android Open Source Project
+** Copyright (c) 2010, Code Aurora Forum. All rights reserved.
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
@@ -37,6 +38,7 @@
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
 #define MAX_LIB_ARGS        16
+#define NUM_CLIENTS 2
 
 static void usage(const char *argv0)
 {
@@ -44,21 +46,31 @@ static void usage(const char *argv0)
     exit(-1);
 }
 
-extern void RIL_register (const RIL_RadioFunctions *callbacks);
+extern void RIL_register (const RIL_RadioFunctions *callbacks, int client_id);
 
 extern void RIL_onRequestComplete(RIL_Token t, RIL_Errno e,
                            void *response, size_t responselen);
-
-extern void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
+//In case of DSDS two unsol functions are needed, corresponding to each of the commands interface.
+extern void RIL_onUnsolicitedResponse_Inst0(int unsolResponse, const void *data,
                                 size_t datalen);
 
-extern void RIL_requestTimedCallback (RIL_TimedCallback callback,
+extern void RIL_onUnsolicitedResponse_Inst1(int unsolResponse, const void *data,
+                                size_t datalen);
+
+extern void RIL_requestTimedCallback(RIL_TimedCallback callback,
                                void *param, const struct timeval *relativeTime);
 
+static int isDsdsEnabled();
 
-static struct RIL_Env s_rilEnv = {
+static struct RIL_Env s_rilEnv_inst0 = {
     RIL_onRequestComplete,
-    RIL_onUnsolicitedResponse,
+    RIL_onUnsolicitedResponse_Inst0,
+    RIL_requestTimedCallback
+};
+
+static struct RIL_Env s_rilEnv_inst1 = {
+    RIL_onRequestComplete,
+    RIL_onUnsolicitedResponse_Inst1,
     RIL_requestTimedCallback
 };
 
@@ -102,12 +114,12 @@ int main(int argc, char **argv)
     char **rilArgv;
     void *dlHandle;
     const RIL_RadioFunctions *(*rilInit)(const struct RIL_Env *, int, char **);
-    const RIL_RadioFunctions *funcs;
+    const RIL_RadioFunctions *funcs_inst[NUM_CLIENTS];
     char libPath[PROPERTY_VALUE_MAX];
     unsigned char hasLibArgs = 0;
 
     int i;
-
+    LOGE("**RIL Daemon Started**");
     for (i = 1; i < argc ;) {
         if (0 == strcmp(argv[i], "-l") && (argc - i > 1)) {
             rilLibPath = argv[i + 1];
@@ -241,6 +253,7 @@ OpenLib:
     dlHandle = dlopen(rilLibPath, RTLD_NOW);
 
     if (dlHandle == NULL) {
+        LOGE("**dl open failed **");
         fprintf(stderr, "dlopen failed: %s\n", dlerror());
         exit(-1);
     }
@@ -268,9 +281,19 @@ OpenLib:
     // Make sure there's a reasonable argv[0]
     rilArgv[0] = argv[0];
 
-    funcs = rilInit(&s_rilEnv, argc, rilArgv);
-
-    RIL_register(funcs);
+    if (isDsdsEnabled()) {
+        argc++;
+        rilArgv[3] = "0";
+        funcs_inst[0] = rilInit(&s_rilEnv_inst0, argc, rilArgv);
+        RIL_register(funcs_inst[0], 0);
+        rilArgv[3] = "1";
+        funcs_inst[1] = rilInit(&s_rilEnv_inst1, argc, rilArgv);
+        RIL_register(funcs_inst[1], 1);
+    }
+    else {
+        funcs_inst[0] = rilInit(&s_rilEnv_inst0, argc, rilArgv);
+        RIL_register(funcs_inst[0], 0);
+    }
 
 done:
 
@@ -278,5 +301,19 @@ done:
         // sleep(UINT32_MAX) seems to return immediately on bionic
         sleep(0x00ffffff);
     }
+}
+
+static int isDsdsEnabled()
+{
+    int enabled = 0;
+    char prop_val[PROPERTY_VALUE_MAX];
+    if (property_get("persist.dsds.enabled", prop_val, "0") > 0)
+    {
+        if (strncmp(prop_val, "true", 4) == 0) {
+            enabled = 1;
+        }
+        LOGE("isDsdsEnabled: prop_val = %s enabled = %d", prop_val, enabled);
+    }
+    return enabled;
 }
 

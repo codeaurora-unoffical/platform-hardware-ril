@@ -123,3 +123,8 @@
     {RIL_REQUEST_CDMA_PRL_VERSION, dispatchVoid, responseString},
     {RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts},
     {RIL_REQUEST_IMS_SEND_SMS, dispatchImsSms, responseSMS},
+    {RIL_REQUEST_SET_UICC_SUBSCRIPTION_SOURCE, dispatchUiccSubscripton, responseVoid},
+    {RIL_REQUEST_SET_DATA_SUBSCRIPTION_SOURCE, dispatchVoid, responseVoid},
+    {RIL_REQUEST_GET_UICC_SUBSCRIPTION_SOURCE, dispatchVoid, responseUiccSubscription},
+    {RIL_REQUEST_GET_DATA_SUBSCRIPTION_SOURCE, dispatchVoid, responseDataSubscription},
+    {RIL_REQUEST_SET_SUBSCRIPTION_MODE, dispatchInts, responseVoid}
