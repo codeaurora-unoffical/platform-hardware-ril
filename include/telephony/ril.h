@@ -439,7 +439,7 @@ typedef enum {
 
 typedef enum {
     /* an integer cause code defined in TS 24.008
-       section 6.1.3.1.3 or close approximation.
+       section 6.1.3.1.3 or TS 24.301 Release 8+ Annex B.
        If the implementation does not have access to the exact cause codes,
        then it should return one of the following values,
        as the UI layer needs to distinguish these
@@ -455,7 +455,12 @@ typedef enum {
     PDP_FAIL_SERVICE_OPTION_NOT_SUBSCRIBED = 0x21, /* no retry */
     PDP_FAIL_SERVICE_OPTION_OUT_OF_ORDER = 0x22,
     PDP_FAIL_NSAPI_IN_USE      = 0x23,             /* no retry */
+    PDP_FAIL_NETWORK_FAILURE = 0x26,
+    PDP_FAIL_ONLY_IPV4_ALLOWED = 0x32,             /* no retry */
+    PDP_FAIL_ONLY_IPV6_ALLOWED = 0x33,             /* no retry */
+    PDP_FAIL_ONLY_SINGLE_BEARER_ALLOWED = 0x34,    /* no retry */
     PDP_FAIL_PROTOCOL_ERRORS   = 0x6F,             /* no retry */
+
     PDP_FAIL_ERROR_UNSPECIFIED = 0xffff,  /* This and all other cases: retry silently */
     /* Not mentioned in the specification */
     PDP_FAIL_REGISTRATION_FAIL = -1,
@@ -467,7 +472,6 @@ typedef enum {
     PDP_FAIL_TETHERED_CALL_ON = -6,         /* data call was disconnected because tethered mode was up
                                               on same APN/data profile - no retry until tethered call
                                               is off */
-    PDP_FAIL_IP_VERSION_NOT_SUPPORTED = -7,   /* IPV6 is not supported no network - no retry */
 } RIL_DataCallFailCause;
 
 /* See RIL_REQUEST_SETUP_DATA_CALL */
@@ -1378,7 +1382,7 @@ typedef struct {
  *
  * "data" is a const char **
  * ((const char **)data)[0] radio technology to setup the connection on
-                            0 - 3GPP, 1 - 3GPP2
+                            0 - 3GPP2, 1 - 3GPP
  * ((const char **)data)[1] is a RIL_DataProfile (support is optional)
  * ((const char **)data)[2] is the APN to connect to if radio technology is 3GPP. This APN will
  *                          override the one in the profile. NULL indicates no APN overrride.
