@@ -72,7 +72,7 @@ typedef enum {
     RIL_E_ILLEGAL_SIM_OR_ME = 15,               /* network selection failed due to
                                                    illegal SIM or ME */
     RIL_E_SETUP_DATA_CALL_FAILURE = 16,          /* data call setup failed with a reason */
-    RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 17       /* Subscription not supported by RIL */
+    RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 17        /* Subscription not supported by RIL */
 } RIL_Errno;
 
 typedef enum {
@@ -863,6 +863,12 @@ typedef struct {
   RIL_Subscription sub_num;     /* Indicates subscription 0 or subscription 1 */
   RIL_UiccSubActStatus  act_status;
 } RIL_SelectUiccSub;
+
+/* Data Call Profile: Simple IP User Profile Parameters*/
+typedef struct {
+  int  profileId;
+  int  priority;       /* priority. [0..255], 0 - highest */
+} RIL_DataCallProfileInfo;
 
 
 /**
@@ -3292,6 +3298,30 @@ typedef struct {
  */
 
 #define RIL_REQUEST_SET_SUBSCRIPTION_MODE 113
+
+/**
+ * RIL_REQUEST_GET_DATA_CALL_PROFILE
+ *
+ * Get the Data Call Profile for a particular app type
+ *
+ * "data" is const int*
+ * (const int*)data[0] - App type. Value is specified the RUIM spec C.S0023-D
+ *
+ *
+ * "response" is a const char * containing the count and the array of profiles
+ * ((const int *)response)[0] Number RIL_DataCallProfileInfo structs(count)
+ * ((const char *)response)[1] is the buffer that contains 'count' number of
+ *                              RIL_DataCallProfileInfo structs.
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  GENERIC_FAILURE
+ *  RIL_E_DATA_CALL_PROFILE_ERROR
+ *  RIL_E_DATA_CALL_PROFILE_NOT_AVAILABLE
+ *
+ */
+#define RIL_REQUEST_GET_DATA_CALL_PROFILE 114
+
 
 /***********************************************************************/
 
