@@ -2821,6 +2821,9 @@ static void processCommandsCallback(int fd, short flags, void *param) {
 
         record_stream_free(p_rs[client_id]);
 
+        // s_listen_event is persistent. So, delete the listen event from
+        // the watch list so that it doesn't get piled up.
+        ril_event_del(&s_listen_event);
         /* start listening for new connections again */
         rilEventAddWakeup(&s_listen_event);
 
@@ -2886,6 +2889,9 @@ static void listenCallback (int fd, short flags, void *param) {
 
     if (s_fdCommand[client_id] < 0 ) {
         LOGE("Error on accept() errno:%d", errno);
+        // s_listen_event is persistent. So, delete the listen event from
+        // the watch list so that it doesn't get piled up.
+        ril_event_del(&s_listen_event);
         /* start listening for new connections again */
         rilEventAddWakeup(&s_listen_event);
           return;
@@ -2923,6 +2929,9 @@ static void listenCallback (int fd, short flags, void *param) {
 
       onCommandsSocketClosed();
 
+      // s_listen_event is persistent. So, delete the listen event from
+      // the watch list so that it doesn't get piled up.
+      ril_event_del(&s_listen_event);
       /* start listening for new connections again */
       rilEventAddWakeup(&s_listen_event);
 
