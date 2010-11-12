@@ -550,6 +550,18 @@ static void sendCallStateChanged(void *param)
         NULL, 0);
 }
 
+/* Invoke this function anywhere to send
+ * RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED. Modify 'mode' to send
+ * different values
+ */
+static void sendTetheredModeStateChanged() {
+    int mode[] = {0};
+    LOGD("RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED mode:%d", mode[0]);
+    RIL_onUnsolicitedResponse (
+        RIL_UNSOL_RESPONSE_TETHERED_MODE_STATE_CHANGED,
+        &mode, sizeof(mode));
+}
+
 static void requestGetCurrentCalls(void *data, size_t datalen, RIL_Token t)
 {
     int err;
