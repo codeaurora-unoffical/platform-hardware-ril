@@ -3831,6 +3831,16 @@ typedef struct {
  */
 #define RIL_UNSOL_EXIT_EMERGENCY_CALLBACK_MODE 1037
 
+/**
+ * RIL_UNSOL_SUBSCRIPTION_READY
+ *
+ * Called when subscription is ready at RIL
+ *
+ * "data" is NULL
+ *
+ */
+#define RIL_UNSOL_SUBSCRIPTION_READY 1038
+
 
 /***********************************************************************/
 
