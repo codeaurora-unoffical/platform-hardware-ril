@@ -207,6 +207,7 @@ static void dispatchSimPuk(Parcel &p, RequestInfo *pRI);
 static void dispatchSimPinSet(Parcel &p, RequestInfo *pRI);
 static void dispatchDepersonalization(Parcel &p, RequestInfo *pRI);
 
+static void dispatchDataCall (Parcel& p, RequestInfo *pRI);
 
 static void dispatchCdmaSms(Parcel &p, RequestInfo *pRI);
 static void dispatchImsSms(Parcel &p, RequestInfo *pRI);
@@ -1597,6 +1598,34 @@ invalid:
     return;
 }
 
+
+// For backwards compatibility in RIL_REQUEST_SETUP_DATA_CALL.
+// Version 4 of the RIL interface adds a new PDP type parameter to support
+// IPv6 and dual-stack PDP contexts. When dealing with a previous version of
+// RIL, remove the parameter from the request.
+static void dispatchDataCall(Parcel& p, RequestInfo *pRI) {
+    // In RIL v3, REQUEST_SETUP_DATA_CALL takes 6 parameters.
+    const int numParamsRilV3 = 6;
+
+    // The first bytes of the RIL parcel contain the request number and the
+    // serial number - see processCommandBuffer(). Copy them over too.
+    int pos = p.dataPosition();
+
+    int numParams = p.readInt32();
+    if (s_callbacks.version < 4 && numParams > numParamsRilV3) {
+      Parcel p2;
+      p2.appendFrom(&p, 0, pos);
+      p2.writeInt32(numParamsRilV3);
+      for(int i = 0; i < numParamsRilV3; i++) {
+        p2.writeString16(p.readString16());
+      }
+      p2.setDataPosition(pos);
+      dispatchStrings(p2, pRI);
+    } else {
+      p.setDataPosition(pos);
+      dispatchStrings(p, pRI);
+    }
+}
 
 static int
 blockingWrite(int fd, const void *buffer, size_t len) {
@@ -3036,14 +3065,15 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
     int flags;
 
     if (callbacks == NULL || ((callbacks->version != RIL_VERSION)
-                && (callbacks->version != 2))) { // Remove when partners upgrade to version 3
+                && (callbacks->version < 2))) { // Remove when partners upgrade to version 3
         LOGE(
             "RIL_register: RIL_RadioFunctions * null or invalid version"
             " (expected %d)", RIL_VERSION);
         return;
     }
-    if (callbacks->version < 3) {
-        LOGE ("RIL_register: upgrade RIL to version 3 current version=%d", callbacks->version);
+    if (callbacks->version < RIL_VERSION) {
+        LOGE ("RIL_register: upgrade RIL to version %d current version=%d",
+              RIL_VERSION, callbacks->version);
     }
 
     if (s_registerCalled > 0) {
