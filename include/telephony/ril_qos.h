@@ -60,14 +60,20 @@ typedef enum {
 
 /* Enum for status of the QoS flows */
 typedef enum {
-    RIL_QOS_SUCCESS,             /* QoS operation complete */
-    RIL_QOS_NEGOTIATED,          /* QoS setup resulted in a neogtiated value */
+    RIL_QOS_ACTIVATED,           /* QoS activation completed or QoS Resumed) */
+    RIL_QOS_ACTIVATED_NETWORK,   /* QoS activation (from network) complete */
     RIL_QOS_USER_RELEASE,        /* QoS released by the user */
     RIL_QOS_NETWORK_RELEASE,     /* QoS released by the network */
+    RIL_QOS_SUSPENDED,           /* QoS was suspended */
+    RIL_QOS_MODIFIED,            /* QoS modified */
     RIL_QOS_ERROR_UNKNOWN        /* Any other error */
 } RIL_QosIndStates;
 
-/* Keys the QoS spec along with the description of their values */
+/* Keys the QoS spec along with the description of their values.
+ *
+ * Each QoS Spec will begin with a unique SPEC_INDEX. Within each spec there can
+ * be multiple filter sets, each of which will start with a unique FILTER_INDEX
+ */
 typedef enum {
     RIL_QOS_SPEC_INDEX,                         /* Positive numerical value */
 
@@ -80,6 +86,8 @@ typedef enum {
     RIL_QOS_FLOW_3GPP2_PROFILE_ID,              /* Positive numerical value */
     RIL_QOS_FLOW_3GPP2_PRIORITY,                /* Positive numerical value */
 
+    RIL_QOS_FILTER_INDEX,                       /* Mandatory. Positive numerical value */
+    RIL_QOS_FILTER_IPVERSION,                   /* Mandatory. Values must be "IP" or "IPV6" */
     RIL_QOS_FILTER_DIRECTION,                   /* RIL_QosDirection */
     RIL_QOS_FILTER_IPV4_SOURCE_ADDR,            /* Format: xxx.xxx.xxx.xxx/yy */
     RIL_QOS_FILTER_IPV4_DESTINATION_ADDR,       /* Format: xxx.xxx.xxx.xxx/yy */

@@ -1779,40 +1779,49 @@ static void  requestSetupQos(void*  data, size_t  datalen, RIL_Token  t)
     const char* in_qosSpec = ((const char **)data)[1];
 
     const int RESPONSE1_PARAM_NUM = 2;
+    // string length of the largest qosid
+    const int MAX_QOSID_STRLEN = 5;
+    char qosIdStr[MAX_QOSID_STRLEN];
 
     char* p_buffer1[RESPONSE1_PARAM_NUM];
     int buffer_size1 = RESPONSE1_PARAM_NUM*sizeof(char*);
     const char* out_code = "0";
-    const char* out_qosId = "1";
-
+    // Static variable that keeps track of the QoS IDs thats given out. For
+    // each QoS request QoS ID is incremented.
+    static int out_qosId = 0;
 
     p_buffer1[0] = out_code;
-    p_buffer1[1] = out_qosId;
-    LOGE("requestSetupQos:RIL_onRequestComplete");
+    // increment out_qosId
+    out_qosId++;
+    snprintf(qosIdStr, MAX_QOSID_STRLEN, "%d", out_qosId);
+
+    p_buffer1[1] = qosIdStr;
+
+    LOGE("requestSetupQos:RIL_onRequestComplete len: %d", buffer_size1);
     RIL_onRequestComplete(t, RIL_E_SUCCESS, p_buffer1, buffer_size1);
 
 
-const int RESPONSE2_PARAM_NUM = 2;
+    const int RESPONSE2_PARAM_NUM = 2;
     char* p_buffer2[RESPONSE2_PARAM_NUM];
     int buffer_size2 = RESPONSE2_PARAM_NUM*sizeof(char*);
 
-    p_buffer2[0] = "1";
-    p_buffer2[1] = "1";
+    // Copy the same qos Id for follow up QoS Ind
+    p_buffer2[0] = qosIdStr;
+    p_buffer2[1] = "0"; // QosInd state as ACTIVATED
+
     LOGE("requestSetupQos:RIL_onUnsolicitedResponse");
     RIL_onUnsolicitedResponse ( RIL_UNSOL_QOS_STATE_CHANGED_IND,
-                p_buffer2, buffer_size2);
+            p_buffer2, buffer_size2);
 }
 
 static void  requestReleaseQos(void*  data, size_t  datalen, RIL_Token  t)
 {
-
     const char* in_qosId = ((const char **)data)[0];
     const int RESPONSE1_PARAM_NUM =1;
     char* p_buffer1[RESPONSE1_PARAM_NUM];
     int buffer_size1 = RESPONSE1_PARAM_NUM*sizeof(char*);
     const char* out_code = "1";
     p_buffer1[0] = out_code;
-
 
     LOGE("requestReleaseQos:RIL_onRequestComplete");
     RIL_onRequestComplete(t, RIL_E_SUCCESS, p_buffer1, buffer_size1);
@@ -1821,56 +1830,84 @@ static void  requestReleaseQos(void*  data, size_t  datalen, RIL_Token  t)
     char* p_buffer2[RESPONSE2_PARAM_NUM];
     int buffer_size2 = RESPONSE2_PARAM_NUM*sizeof(char*);
 
-    p_buffer2[0] = "0";
-    p_buffer2[1] = "0";
+    p_buffer2[0] = in_qosId;
+    p_buffer2[1] = "2"; // User Release
     LOGE("requestRelease:RIL_onUnsolicitedResponse");
     RIL_onUnsolicitedResponse ( RIL_UNSOL_QOS_STATE_CHANGED_IND,
-                p_buffer2, buffer_size2);
-
-
-
+            p_buffer2, buffer_size2);
 }
+
 static void  requestModifyQos(void*  data, size_t  datalen, RIL_Token  t)
 {
-    const char* in_qosId = ((const char *)data)[0];
+    const char* in_qosId = ((const char **)data)[0];
     const char* in_qosSpec = ((const char *)data)[1];
 
     const int RESPONSE1_PARAM_NUM = 1;
     char* p_buffer1[RESPONSE1_PARAM_NUM];
     int buffer_size1 = RESPONSE1_PARAM_NUM*sizeof(char*);
-    const char* out_code = "1";
+    const char* out_code = "0";
     p_buffer1[0] = out_code;
 
     LOGE("requestModifyQos:RIL_onRequestComplete");
     RIL_onRequestComplete(t, RIL_E_SUCCESS, p_buffer1, buffer_size1);
 
+    const int RESPONSE2_PARAM_NUM = 2;
+    char* p_buffer2[RESPONSE2_PARAM_NUM];
+    int buffer_size2 = RESPONSE2_PARAM_NUM*sizeof(char*);
 
+    p_buffer2[0] = in_qosId;
+    p_buffer2[1] = "5"; //Modified
+    LOGE("requestModify:RIL_onUnsolicitedResponse");
+    RIL_onUnsolicitedResponse ( RIL_UNSOL_QOS_STATE_CHANGED_IND,
+            p_buffer2, buffer_size2);
+}
+
+static void  requestSuspendQos(void*  data, size_t  datalen, RIL_Token  t)
+{
+    const char* in_qosId = ((const char **)data)[0];
+    const int RESPONSE1_PARAM_NUM = 1;
+    char* p_buffer1[RESPONSE1_PARAM_NUM];
+    int buffer_size1 = RESPONSE1_PARAM_NUM*sizeof(char*);
+    const char* out_code = "0";
+    p_buffer1[0] = out_code;
+
+    LOGE("requestSuspendQos:RIL_onRequestComplete len: %d", buffer_size1);
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, p_buffer1, buffer_size1);
 
     const int RESPONSE2_PARAM_NUM = 2;
     char* p_buffer2[RESPONSE2_PARAM_NUM];
     int buffer_size2 = RESPONSE2_PARAM_NUM*sizeof(char*);
 
-    p_buffer2[0] = "1";
-    p_buffer2[1] = "RIL_QOS_SUCCESS";
-    LOGE("requestModify:RIL_onUnsolicitedResponse");
+    p_buffer2[0] = in_qosId;
+    p_buffer2[1] = "4"; // Suspended
+    LOGE("requestSuspendQos:RIL_onUnsolicitedResponse");
     RIL_onUnsolicitedResponse ( RIL_UNSOL_QOS_STATE_CHANGED_IND,
-                p_buffer2, buffer_size2);
-
+            p_buffer2, buffer_size2);
 }
-static void  requestSuspendQos(void*  data, size_t  datalen, RIL_Token  t)
-{
-    const char* in_qosId = ((const char *)data)[0];
 
-    LOGE("requestSuspendQos:RIL_onRequestComplete");
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
-}
 static void  requestResumeQos(void*  data, size_t  datalen, RIL_Token  t)
 {
-    const char* in_qosId = ((const char *)data)[0];
+    const char* in_qosId = ((const char **)data)[0];
+    const int RESPONSE1_PARAM_NUM = 1;
+    char* p_buffer1[RESPONSE1_PARAM_NUM];
+    int buffer_size1 = RESPONSE1_PARAM_NUM*sizeof(char*);
+    const char* out_code = "0";
+    p_buffer1[0] = out_code;
 
     LOGE("requestResumeQos:RIL_onRequestComplete");
-    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, p_buffer1, buffer_size1);
+
+    const int RESPONSE2_PARAM_NUM = 2;
+    char* p_buffer2[RESPONSE2_PARAM_NUM];
+    int buffer_size2 = RESPONSE2_PARAM_NUM*sizeof(char*);
+
+    p_buffer2[0] = in_qosId;
+    p_buffer2[1] = "0"; // Activated
+    LOGE("requestResumeQos:RIL_onUnsolicitedResponse");
+    RIL_onUnsolicitedResponse ( RIL_UNSOL_QOS_STATE_CHANGED_IND,
+            p_buffer2, buffer_size2);
 }
+
 static void  requestGetQosStatus(void*  data, size_t  datalen, RIL_Token  t)
 {
 

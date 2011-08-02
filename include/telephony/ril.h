@@ -3677,7 +3677,8 @@ typedef struct {
  * "data" is char **
  * ((char **)data[0] is QoS ID
  *
- * "response" is NULL
+ * "response" is char ** representing a return code
+ * ((char **)response)[0] - return code. 0 - success, non-0 - failure
  *
  * Valid errors:
  *  SUCCESS
@@ -3692,7 +3693,8 @@ typedef struct {
  * "data" is char **
  * ((char **)data)[0] is QoS ID
  *
- * "response" is NULL
+ * "response" is char ** representing a return code
+ * ((char **)response)[0] - return code. 0 - success, non-0 - failure
  *
  * Valid errors:
  *  SUCCESS
