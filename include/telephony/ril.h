@@ -1437,7 +1437,7 @@ typedef struct {
  * "data" is NULL
  * "response" is a "char **"
  * ((const char **)response)[0] is registration state 0-5 from TS 27.007 10.1.20 AT+CGREG
- * ((const char **)response)[1] is LAC if registered or NULL if not
+ * ((const char **)response)[1] is LAC/TAC (TAC on LTE) if registered or NULL if not
  * ((const char **)response)[2] is CID if registered or NULL if not
  * ((const char **)response)[3] indicates the available data radio technology,
  *                              valid values as defined by RIL_RadioTechnology.
@@ -1455,8 +1455,8 @@ typedef struct {
  * ((const char **)response)[5] The maximum number of simultaneous Data Calls that can be
  *                              established using RIL_REQUEST_SETUP_DATA_CALL.
  *
- * LAC and CID are in hexadecimal format.
- * valid LAC are 0x0000 - 0xffff
+ * LAC, TAC and CID are in hexadecimal format.
+ * valid LAC/TAC are 0x0000 - 0xffff
  * valid CID are 0x00000000 - 0x0fffffff
  *
  * Please note that registration state 4 ("unknown") is treated
