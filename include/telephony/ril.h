@@ -2713,6 +2713,7 @@ typedef struct {
  * ((int *)data)[0] is == 9 for LTE, GSM/WCDMA
  * ((int *)data)[0] is == 10 for LTE, CDMA, EvDo, GSM/WCDMA
  * ((int *)data)[0] is == 11 for LTE only
+ * ((int *)data)[0] is == 12 for LTE /WCDMA
  *
  * "response" is NULL
  *
@@ -2745,6 +2746,7 @@ typedef struct {
  * ((int *)response)[0] is == 9 for LTE, GSM/WCDMA
  * ((int *)response)[0] is == 10 for LTE, CDMA, EvDo, GSM/WCDMA
  * ((int *)response)[0] is == 11 for LTE only
+ * ((int *)response)[0] is == 12 for LTE /WCDMA
  *
  * Valid errors:
  *  SUCCESS
