@@ -71,7 +71,11 @@ typedef enum {
     RIL_E_SS_MODIFIED_TO_DIAL = 23,             /* SS request modified to DIAL */
     RIL_E_SS_MODIFIED_TO_USSD = 24,             /* SS request modified to USSD */
     RIL_E_SS_MODIFIED_TO_SS = 25,               /* SS request modified to different SS request */
-    RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 26       /* Subscription not supported by RIL */
+    RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 26,      /* Subscription not supported by RIL */
+    RIL_E_INVALID_PARAMETER = 27,               /* Invalid parameter given in a
+                                                   RIL_REQUEST_MODIFY_CALL_INITIATE */
+    RIL_E_REJECTED_BY_REMOTE = 28,              /* Remote end rejected a change started by
+                                                   RIL_REQUEST_MODIFY_CALL_INITIATE */
 } RIL_Errno;
 
 typedef enum {
@@ -190,6 +194,47 @@ typedef struct {
   char signal;       /* as defined 3.7.5.5-3, 3.7.5.5-4 or 3.7.5.5-5 */
 } RIL_CDMA_SignalInfoRecord;
 
+typedef enum {
+    RIL_CALL_TYPE_VOICE = 0, /* Voice only call */
+    RIL_CALL_TYPE_VS_TX = 1, /* Video sharing call:
+                              * tx-only video, bi-directional audio */
+    RIL_CALL_TYPE_VS_RX = 2, /* Video sharing call: rx-only video,
+                              * bi-directional audio */
+    RIL_CALL_TYPE_VT = 3,    /* Video telephony call: two way video,
+                              * two way audio */
+} RIL_Call_Type;
+
+typedef enum {
+    RIL_CALL_DOMAIN_UNKNOWN = 0,   /* Unknown domain. Sent by RIL when modem
+                                    * has not yet selected a
+                                    * domain for a call */
+    RIL_CALL_DOMAIN_CS = 1,        /* Circuit switched domain */
+    RIL_CALL_DOMAIN_PS = 2,        /* Packet switched domain */
+    RIL_CALL_DOMAIN_AUTOMATIC = 3, /* Automatic domain. Sent by Android to
+                                    * indicate that the domain
+                                    * for a new call should be selected by modem */
+} RIL_Call_Domain;
+
+typedef struct {
+    RIL_Call_Type   callType;   /* Initial call type to use */
+    RIL_Call_Domain callDomain; /* Call domain to place the call on.
+                                 * Modem is expected to respect
+                                 * the selected call domain.
+                                 * When domain is AUTOMATIC, modem will
+                                 * select the best available domain */
+    int extrasLength;           /* The number of elements in the extra field */
+    const char **extras;        /* A list of additional call attributes,
+                                 * each char * being a key-value pair.
+                                 * The format should be
+                                 * <namespace>:<param-name>=<value>
+                                   e.g. vt:picture-size=320x240 */
+} RIL_Call_Details;
+
+typedef struct {
+    int             callIndex;
+    RIL_Call_Details *callDetails;
+} RIL_Call_Modify;
+
 typedef struct {
     RIL_CallState   state;
     int             index;      /* Connection Index for use with, eg, AT+CHLD */
@@ -205,6 +250,7 @@ typedef struct {
     char *          name;       /* Remote party name */
     int             namePresentation; /* 0=Allowed, 1=Restricted, 2=Not Specified/Unknown 3=Payphone */
     RIL_UUS_Info *  uusInfo;    /* NULL or Pointer to User-User Signaling Information */
+    RIL_Call_Details * callDetails; /* NULL or Pointer to the current call detail */
 } RIL_Call;
 
 /* Deprecated, use RIL_Data_Call_Response_v6 */
@@ -303,6 +349,7 @@ typedef struct {
              * clir == 2 on "CLIR suppression" (allow CLI presentation)
              */
     RIL_UUS_Info *  uusInfo;    /* NULL or Pointer to User-User Signaling Information */
+    RIL_Call_Details *callDetails;
 } RIL_Dial;
 
 typedef struct {
@@ -404,6 +451,23 @@ typedef enum {
     CALL_FAIL_CDMA_NOT_EMERGENCY = 1008, /* For non-emergency number dialed
                                             during emergency callback mode */
     CALL_FAIL_CDMA_ACCESS_BLOCKED = 1009, /* CDMA network access probes blocked */
+
+    CALL_FAIL_NETWORK_UNAVAILABLE = 1010, /* PS network is unavailable
+                                       * Remote party is temporarily camped on
+                                       * non PS network.
+                                       * Originating / remote party lost PS
+                                       * coverage during the call
+                                       * UI prompts user to retry call on CS*/
+
+    CALL_FAIL_FEATURE_UNAVAILABLE = 1011, /* User has not subscribed for this
+                                       * service. UI prompts user to retry call
+                                       * on CS*/
+
+    CALL_FAIL_SIP_ERROR = 1012, /* Sip timeout or dialog not present error during
+                                      * call upgrade/downgrade
+                                      * SIP error code 481/408
+                                      * sent by IMS stack. UI does not take
+                                      * any action on this error code.*/
     CALL_FAIL_ERROR_UNSPECIFIED = 0xffff
 } RIL_LastCallFailCause;
 
@@ -1979,7 +2043,11 @@ typedef struct {
  * RIL_REQUEST_SWITCH_WAITING_OR_HOLDING_AND_ACTIVE will be used in this case
  * instead
  *
- * "data" is NULL
+ * "data" is int *, but can be NULL
+ * ((int *)data)[0] is RIL_Call_Type.
+ *      Used to provide a mechanism to reject a Video Telephony
+ *      Call, but still answer it as Voice only call. Should we allow full
+ *      RIL_Call_Details here to allow for capabilities negotiation of media?
  * "response" is NULL
  *
  * Valid errors:
@@ -3785,7 +3853,53 @@ typedef struct {
  *  SUCCESS
  *  GENERIC_FAILURE
  */
+
 #define RIL_REQUEST_RESUME_QOS 123
+
+/**
+ * RIL_REQUEST_MODIFY_CALL_INITIATE
+ *
+ * Request sent to propose parameter changes for which a confirmation
+ * from the remote end is required (e.g. call type upgrade/downgrade)
+ *
+ * This will be followed by a RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED
+ * when parameters were changed
+ * successfully.
+ *
+ * "data" is RIL_Call_Modify *
+ *
+ * "response" is NULL. The actual parameters selected are given
+ * through GET_CURRENT_CALLS
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  INVALID_PARAMETER
+ *  REJECTED_BY_REMOTE
+ *  GENERIC_FAILURE
+ *
+ * See also: RIL_UNSOL_MODIFY_CALL
+ *           RIL_REQUEST_MODIFY_CALL_CONFIRM
+ */
+#define RIL_REQUEST_MODIFY_CALL_INITIATE 124
+
+/**
+ * RIL_REQUEST_MODIFY_CALL_CONFIRM
+ *
+ * Sent by the receiver of RIL_UNSOL_MODIFY_CALL to confirm the parameters
+ * to be used for the call going forward. This will be followed by
+ * RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED if setting of parameters succeeded.
+ *
+ * "data" is RIL_Call_Modify *.
+ *
+ * "response" is NULL. The actual parameters selected are given through
+ * GET_CURRENT_CALLS
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  GENERIC_FAILURE
+ */
+#define RIL_REQUEST_MODIFY_CALL_CONFIRM 125
+
 
 /***********************************************************************/
 
@@ -4352,6 +4466,21 @@ typedef struct {
  *
  */
 #define RIL_UNSOL_QOS_STATE_CHANGED_IND 1042
+
+/**
+ * RIL_UNSOL_MODIFY_CALL_REQUEST
+ *
+ * Indication sent when modem receives a request to change parameters
+ * that require confirmation, including call type (upgrade/downgrade).
+ * After receiving this UNSOL, framework will reply with a
+ * RIL_REQUEST_MODIFY_CALL_CONFIRM
+ *
+ * "data" is a RIL_Call_Modify *
+ *
+ * See also: RIL_REQUEST_MODIFY_CALL_INITIATE
+ *           RIL_REQUEST_MODIFY_CALL_CONFIRM
+ */
+#define RIL_UNSOL_MODIFY_CALL 1043
 
 
 /***********************************************************************/
