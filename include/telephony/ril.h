@@ -797,6 +797,8 @@ typedef struct {
   RIL_UiccSubActStatus  act_status;
 } RIL_SelectUiccSub;
 
+#define DEFAULT_SUB 0
+
 typedef enum {
   SS_CFU,
   SS_CF_BUSY,
