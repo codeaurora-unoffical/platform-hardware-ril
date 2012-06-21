@@ -497,6 +497,7 @@ static void
 invalidCommandBlock (RequestInfo *pRI) {
     LOGE("invalid command block for token %d request %s and client_id %d ",
                 pRI->token, requestToString(pRI->pCI->requestNumber), pRI->client_id);
+    RIL_onRequestComplete(pRI, RIL_E_GENERIC_FAILURE, NULL, 0);
 }
 
 /** Callee expects NULL */
@@ -740,7 +741,6 @@ dispatchSmsWrite (Parcel &p, RequestInfo *pRI) {
     return;
 invalid:
     invalidCommandBlock(pRI);
-    RIL_onRequestComplete(pRI, RIL_E_GENERIC_FAILURE, NULL, 0);
     return;
 }
 
@@ -814,6 +814,11 @@ dispatchDial (Parcel &p, RequestInfo *pRI) {
                 len = 0;
             } else {
                 uusInfo.uusData = (char*) p.readInplace(len);
+                // readInplace returns NULL if the length is invalid
+                if (uusInfo.uusData == NULL) {
+                    LOGE("Invalid length in UUSInfo!");
+                    goto invalid;
+                }
             }
 
             uusInfo.uusLength = len;
