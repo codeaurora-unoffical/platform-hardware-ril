@@ -43,6 +43,12 @@
 #define MAX_LIB_ARGS        16
 #define NUM_CLIENTS 2
 
+#define DSDS_PROPERTY        "dsds"
+#define DSDS_PROPERTY_LENGTH 4
+#define DSDA_PROPERTY        "dsda"
+#define DSDA_PROPERTY_LENGTH 4
+
+
 static void usage(const char *argv0)
 {
     fprintf(stderr, "Usage: %s -l <ril impl library> [-- <args for impl library>]\n", argv0);
@@ -336,9 +342,12 @@ static int isMultiSimEnabled()
 {
     int enabled = 0;
     char prop_val[PROPERTY_VALUE_MAX];
-    if (property_get("persist.multisim.config", prop_val, "0") > 0)
-    {
-        if ((strncmp(prop_val, "dsds", 4) == 0) || (strncmp(prop_val, "dsda", 4) == 0)) {
+    int multisim_config_len = property_get("persist.multisim.config", prop_val, "0");
+    if (multisim_config_len > 0) {
+        if ((strncmp(prop_val, DSDS_PROPERTY, DSDS_PROPERTY_LENGTH) == 0
+                    && multisim_config_len == DSDS_PROPERTY_LENGTH)
+                || (strncmp(prop_val, DSDA_PROPERTY, DSDA_PROPERTY_LENGTH) == 0
+                    && multisim_config_len == DSDA_PROPERTY_LENGTH)) {
             enabled = 1;
         }
         ALOGE("isMultiSimEnabled: prop_val = %s enabled = %d", prop_val, enabled);
