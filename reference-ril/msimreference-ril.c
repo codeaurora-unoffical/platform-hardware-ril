@@ -50,6 +50,10 @@
 #include <utils/Log.h>
 
 #define MAX_AT_RESPONSE 0x1000
+#define DSDS_PROPERTY        "dsds"
+#define DSDS_PROPERTY_LENGTH 4
+#define DSDA_PROPERTY        "dsda"
+#define DSDA_PROPERTY_LENGTH 4
 
 /* pathname returned from RIL_REQUEST_SETUP_DATA_CALL / RIL_REQUEST_SETUP_DEFAULT_PDP */
 #define PPP_TTY_PATH "eth0"
@@ -2540,11 +2544,14 @@ static void usage(char *s)
 
 static int isMultiSimEnabled()
 {
-    int enabled = 1;
+    int enabled = 0;
     char prop_val[PROPERTY_VALUE_MAX];
-    if (property_get("persist.multisim.config", prop_val, "0") > 0)
-    {
-        if ((strncmp(prop_val, "dsds", 4) == 0) || (strncmp(prop_val, "dsda", 4) == 0)) {
+    int multisim_config_len = property_get("persist.multisim.config", prop_val, "0");
+    if (multisim_config_len > 0) {
+        if ((strncmp(prop_val, DSDS_PROPERTY, DSDS_PROPERTY_LENGTH) == 0
+                    && multisim_config_len == DSDS_PROPERTY_LENGTH)
+                || (strncmp(prop_val, DSDA_PROPERTY, DSDA_PROPERTY_LENGTH) == 0
+                    && multisim_config_len == DSDA_PROPERTY_LENGTH)) {
             enabled = 1;
         }
     }
