@@ -50,6 +50,12 @@
 #include <utils/Log.h>
 
 #define MAX_AT_RESPONSE 0x1000
+#define DSDS_PROPERTY        "dsds"
+#define DSDS_PROPERTY_LENGTH 4
+#define DSDA_PROPERTY        "dsda"
+#define DSDA_PROPERTY_LENGTH 4
+#define TSTS_PROPERTY        "tsts"
+#define TSTS_PROPERTY_LENGTH 4
 
 /* pathname returned from RIL_REQUEST_SETUP_DATA_CALL / RIL_REQUEST_SETUP_DEFAULT_PDP */
 #define PPP_TTY_PATH "eth0"
@@ -87,6 +93,7 @@ typedef enum {
 enum {
     REF_RIL_FIRST_INSTANCE_ID = 0,
     REF_RIL_SECOND_INSTANCE_ID = 1,
+    REF_RIL_THIRD_INSTANCE_ID = 2,
     REF_RIL_MAX_INSTANCE_ID
 };
 
@@ -104,6 +111,13 @@ static int onSupports_func1 (int requestCode);
 static void onCancel_func1 (RIL_Token t);
 static const char *getVersion_func1();
 
+/* Callback functions for instance 2 */
+static void onRequest_func2 (int request, void *data, size_t datalen, RIL_Token t);
+static RIL_RadioState currentState_func2();
+static int onSupports_func2 (int requestCode);
+static void onCancel_func2 (RIL_Token t);
+static const char *getVersion_func2();
+
 static int isRadioOn();
 static SIM_Status getSIMStatus(int inst_id);
 static int getCardStatus(int inst_id, RIL_CardStatus_v6 **pp_card_status);
@@ -113,6 +127,8 @@ static void onDataCallListChanged(void *param);
 extern const char * requestToString(int request);
 
 static int isMultiSimEnabled();
+static int getNumRILInstances();
+static int instanceOnSetupDataCall = -1;
 
 /*** Static Variables ***/
 static const RIL_RadioFunctions s_callbacks [REF_RIL_MAX_INSTANCE_ID] = {
@@ -131,6 +147,14 @@ static const RIL_RadioFunctions s_callbacks [REF_RIL_MAX_INSTANCE_ID] = {
     onSupports_func1,
     onCancel_func1,
     getVersion_func1
+},
+{
+    RIL_VERSION,
+    onRequest_func2,
+    currentState_func2,
+    onSupports_func2,
+    onCancel_func2,
+    getVersion_func2
 }
 };
 
@@ -170,7 +194,7 @@ static const struct RIL_Env *s_rilenv[REF_RIL_MAX_INSTANCE_ID];
 
 #endif
 
-static RIL_RadioState sState[REF_RIL_MAX_INSTANCE_ID] = {RADIO_STATE_UNAVAILABLE, RADIO_STATE_UNAVAILABLE};
+static RIL_RadioState sState[REF_RIL_MAX_INSTANCE_ID] = {RADIO_STATE_UNAVAILABLE, RADIO_STATE_UNAVAILABLE, RADIO_STATE_UNAVAILABLE};
 
 static pthread_mutex_t s_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_state_cond = PTHREAD_COND_INITIALIZER;
@@ -541,13 +565,15 @@ static void requestOrSendDataCallList(int inst_id, RIL_Token *t)
 
     at_response_free(p_response);
 
-    if (t != NULL)
+    if (t != NULL) {
+        instanceOnSetupDataCall = inst_id;
         RIL_onRequestComplete(inst_id, *t, RIL_E_SUCCESS, responses,
                               n * sizeof(RIL_Data_Call_Response_v6));
-    else
+    } else {
         RIL_onUnsolicitedResponse(inst_id, RIL_UNSOL_DATA_CALL_LIST_CHANGED,
                                   responses,
                                   n * sizeof(RIL_Data_Call_Response_v6));
+    }
 
     return;
 
@@ -733,7 +759,8 @@ error:
     at_response_free(p_response);
 }
 
-static RIL_SelectUiccSub currentSelectedSub[2] = {
+static RIL_SelectUiccSub currentSelectedSub[REF_RIL_MAX_INSTANCE_ID] = {
+    {-1, -1, RIL_SUBSCRIPTION_1, RIL_UICC_SUBSCRIPTION_DEACTIVATE },
     {-1, -1, RIL_SUBSCRIPTION_1, RIL_UICC_SUBSCRIPTION_DEACTIVATE },
     {-1, -1, RIL_SUBSCRIPTION_1, RIL_UICC_SUBSCRIPTION_DEACTIVATE }
 };
@@ -741,7 +768,7 @@ static RIL_SelectUiccSub currentSelectedSub[2] = {
 static int isAppReady(int slot, int app_index) {
     int i = 0;
 
-    for (i=0; i<2; i++) {
+    for (i = 0; i < getNumRILInstances(); i++) {
         if (currentSelectedSub[i].act_status == RIL_UICC_SUBSCRIPTION_ACTIVATE
                 && currentSelectedSub[i].slot == slot
                 && currentSelectedSub[i].app_index == app_index) {
@@ -808,10 +835,13 @@ static void setDataSubscriptionSource(int inst_id, int request, void *data, size
     // workarround: send success for now.
     RIL_onRequestComplete(inst_id, t, RIL_E_SUCCESS, NULL, 0);
 
-    inst_id = (inst_id == 0) ? 1 : 0;
-    ALOGD("setDataSubscriptionSource() : sending all data disconnected on SUB: = %d", inst_id);
-    RIL_onUnsolicitedResponse(inst_id, RIL_UNSOL_DATA_CALL_LIST_CHANGED,
-                              NULL, 0);
+    if (instanceOnSetupDataCall != -1) {
+        ALOGD("setDataSubscriptionSource() : sending all data disconnected on SUB: = %d",
+                instanceOnSetupDataCall);
+        RIL_onUnsolicitedResponse(instanceOnSetupDataCall, RIL_UNSOL_DATA_CALL_LIST_CHANGED,
+                NULL, 0);
+        instanceOnSetupDataCall = -1;
+    }
 }
 
 static void getDataSubscriptionSource(int inst_id, int request, void *data, size_t datalen, RIL_Token t)
@@ -1434,6 +1464,9 @@ static void  requestSIM_IO(int inst_id, void *data, size_t datalen, RIL_Token t)
             if (inst_id == REF_RIL_SECOND_INSTANCE_ID) {
                 sr.simResponse = "88004433112288557700";
             }
+            if (inst_id == REF_RIL_THIRD_INSTANCE_ID) {
+                sr.simResponse = "88004433112288558800";
+            }
             ALOGD("requestSIM_IO(): Read Request for ICCID on inst_id - %d. ICCID = %s",
                     inst_id, sr.simResponse);
         }
@@ -1862,6 +1895,11 @@ onRequest_func1 (int request, void *data, size_t datalen, RIL_Token t)
     onRequest (REF_RIL_SECOND_INSTANCE_ID, request, data, datalen, t);
 }
 
+static void
+onRequest_func2 (int request, void *data, size_t datalen, RIL_Token t)
+{
+    onRequest (REF_RIL_THIRD_INSTANCE_ID, request, data, datalen, t);
+}
 
 /**
  * Synchronous call from the RIL to us to return current radio state.
@@ -1872,8 +1910,10 @@ currentState(int inst_id)
 {
     if (inst_id == REF_RIL_FIRST_INSTANCE_ID) {
         return sState[REF_RIL_FIRST_INSTANCE_ID];
-    } else {
+    } else if (inst_id == REF_RIL_SECOND_INSTANCE_ID) {
         return sState[REF_RIL_SECOND_INSTANCE_ID];
+    } else {
+        return sState[REF_RIL_THIRD_INSTANCE_ID];
     }
 }
 
@@ -1895,6 +1935,13 @@ currentState_func1()
 {
     ALOGD("currentState_func1");
     return currentState(REF_RIL_SECOND_INSTANCE_ID);
+}
+
+static RIL_RadioState
+currentState_func2()
+{
+    ALOGD("currentState_func2");
+    return currentState(REF_RIL_THIRD_INSTANCE_ID);
 }
 
 /**
@@ -1936,6 +1983,11 @@ onSupports_func1(int requestCode)
     return onSupports(REF_RIL_SECOND_INSTANCE_ID, requestCode);
 }
 
+static int
+onSupports_func2(int requestCode)
+{
+    return onSupports(REF_RIL_THIRD_INSTANCE_ID, requestCode);
+}
 
 static void onCancel (int instance, RIL_Token t)
 {
@@ -1958,6 +2010,10 @@ static void onCancel_func1 (RIL_Token t)
 {
     onCancel(REF_RIL_SECOND_INSTANCE_ID, t);
 }
+static void onCancel_func2 (RIL_Token t)
+{
+    onCancel(REF_RIL_THIRD_INSTANCE_ID, t);
+}
 
 static const char * getVersion(int inst_id)
 {
@@ -1978,6 +2034,10 @@ static const char * getVersion_func0(void)
 static const char * getVersion_func1(void)
 {
     return getVersion(REF_RIL_SECOND_INSTANCE_ID);
+}
+static const char * getVersion_func2(void)
+{
+    return getVersion(REF_RIL_THIRD_INSTANCE_ID);
 }
 
 /*static void
@@ -2436,10 +2496,12 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             if (isMultiSimEnabled()) {
                 if (strStartsWith(s,"RING")) {
                     mt_ring_counter++;
-                    if (mt_ring_counter % 2 == 0) {
+                    if (mt_ring_counter % 3 == 1) {
                         inst_id = REF_RIL_FIRST_INSTANCE_ID;
-                    } else {
+                    } else if (mt_ring_counter % 3 == 2) {
                         inst_id = REF_RIL_SECOND_INSTANCE_ID;
+                    } else {
+                        inst_id = REF_RIL_THIRD_INSTANCE_ID;
                     }
                     ALOGE("Incoming Ring. Sending UNSOL_RESPONSE_CALL_STATE_CHANGED on %d", inst_id);
                 }
@@ -2470,8 +2532,11 @@ static void onUnsolicited (const char *s, const char *sms_pdu)
             if (line_sms == 0) {
                 inst_id = REF_RIL_FIRST_INSTANCE_ID;
                 line_sms = 1;
-            } else {
+            } else if (line_sms == 1){
                 inst_id = REF_RIL_SECOND_INSTANCE_ID;
+                line_sms = 2;
+            } else {
+                inst_id = REF_RIL_THIRD_INSTANCE_ID;
                 line_sms = 0;
             }
         }
@@ -2505,10 +2570,10 @@ static void onATReaderClosed()
     ALOGI("AT channel closed\n");
     at_close();
     s_closed = 1;
+    int i;
 
-    setRadioState (REF_RIL_FIRST_INSTANCE_ID, RADIO_STATE_UNAVAILABLE);
-    if (isMultiSimEnabled()) {
-        setRadioState (REF_RIL_SECOND_INSTANCE_ID, RADIO_STATE_UNAVAILABLE);
+    for (i = 0; i < getNumRILInstances(); i++) {
+        setRadioState (i, RADIO_STATE_UNAVAILABLE);
     }
 }
 
@@ -2517,14 +2582,13 @@ static void onATTimeout()
 {
     ALOGI("AT channel timeout; closing\n");
     at_close();
-
+    int i;
     s_closed = 1;
 
     /* FIXME cause a radio reset here */
 
-    setRadioState (REF_RIL_FIRST_INSTANCE_ID, RADIO_STATE_UNAVAILABLE);
-    if (isMultiSimEnabled()) {
-        setRadioState (REF_RIL_SECOND_INSTANCE_ID, RADIO_STATE_UNAVAILABLE);
+    for (i = 0; i < getNumRILInstances(); i++) {
+        setRadioState (i, RADIO_STATE_UNAVAILABLE);
     }
 }
 
@@ -2542,14 +2606,35 @@ static int isMultiSimEnabled()
 {
     int enabled = 1;
     char prop_val[PROPERTY_VALUE_MAX];
-    if (property_get("persist.multisim.config", prop_val, "0") > 0)
-    {
-        if ((strncmp(prop_val, "dsds", 4) == 0) || (strncmp(prop_val, "dsda", 4) == 0)) {
+    int multisim_config_len = property_get("persist.multisim.config", prop_val, "0");
+    if (multisim_config_len > 0) {
+        if ((strncmp(prop_val, DSDS_PROPERTY, DSDS_PROPERTY_LENGTH) == 0
+                    && multisim_config_len == DSDS_PROPERTY_LENGTH)
+                || (strncmp(prop_val, DSDA_PROPERTY, DSDA_PROPERTY_LENGTH) == 0
+                    && multisim_config_len == DSDA_PROPERTY_LENGTH)
+                || (strncmp(prop_val, TSTS_PROPERTY, TSTS_PROPERTY_LENGTH) == 0
+                    && multisim_config_len == TSTS_PROPERTY_LENGTH)) {
             enabled = 1;
         }
     }
     ALOGD("REF_RIL: isMultiSimEnabled: prop_val = %s enabled = %d", prop_val, enabled);
     return enabled;
+}
+
+static int getNumRILInstances()
+{
+    char prop_val[PROPERTY_VALUE_MAX];
+    int multisim_config_len = property_get("persist.multisim.config", prop_val, "0");
+    if (multisim_config_len > 0) {
+        if ((strncmp(prop_val, TSTS_PROPERTY, TSTS_PROPERTY_LENGTH) == 0
+                && multisim_config_len == TSTS_PROPERTY_LENGTH)) {
+            return MAX_PHONE_COUNT_TRI_SIM;
+        } else if ((strncmp(prop_val, DSDS_PROPERTY, DSDS_PROPERTY_LENGTH) == 0
+                && multisim_config_len == DSDS_PROPERTY_LENGTH)) {
+            return MAX_PHONE_COUNT_DUAL_SIM;
+        }
+    }
+    return MAX_PHONE_COUNT_SINGLE_SIM;
 }
 
 static void *
@@ -2644,6 +2729,7 @@ mainLoop(void *param)
 
 pthread_t s_tid_mainloop_0;
 pthread_t s_tid_mainloop_1;
+pthread_t s_tid_mainloop_2;
 
 const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **argv)
 {
@@ -2702,8 +2788,10 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
     // Create mainLoop thread for instance 1 or 2.
     if (inst_id == REF_RIL_FIRST_INSTANCE_ID) {
         ret = pthread_create(&s_tid_mainloop_0, &attr, mainLoop, (void *)inst_id);
-    } else {
+    } else if (inst_id == REF_RIL_SECOND_INSTANCE_ID) {
         ret = pthread_create(&s_tid_mainloop_1, &attr, mainLoop, (void *)inst_id);
+    } else {
+        ret = pthread_create(&s_tid_mainloop_2, &attr, mainLoop, (void *)inst_id);
     }
 
     return &s_callbacks[inst_id];

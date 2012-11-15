@@ -41,7 +41,15 @@
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
 #define MAX_LIB_ARGS        16
-#define NUM_CLIENTS 2
+#define NUM_CLIENTS 3
+
+#define DSDS_PROPERTY        "dsds"
+#define DSDS_PROPERTY_LENGTH 4
+#define DSDA_PROPERTY        "dsda"
+#define DSDA_PROPERTY_LENGTH 4
+#define TSTS_PROPERTY        "tsts"
+#define TSTS_PROPERTY_LENGTH 4
+#define NON_MULTI_SIM_PROPERTY "non_multisim"
 
 static void usage(const char *argv0)
 {
@@ -64,6 +72,7 @@ extern void RIL_setMaxNumClients(int num_clients);
 
 static int isMultiSimEnabled();
 static int isMultiRild();
+static char* getMultiSimConfiguration();
 
 static struct RIL_Env s_rilEnv = {
     RIL_onRequestComplete,
@@ -74,6 +83,12 @@ static struct RIL_Env s_rilEnv = {
 static struct RIL_Env s_rilEnv2 = {
     RIL_onRequestComplete,
     RIL_onUnsolicitedResponse2,
+    RIL_requestTimedCallback
+};
+
+static struct RIL_Env s_rilEnv3 = {
+    RIL_onRequestComplete,
+    RIL_onUnsolicitedResponse3,
     RIL_requestTimedCallback
 };
 
@@ -118,7 +133,7 @@ int main(int argc, char **argv)
     static char * s_argv[MAX_LIB_ARGS];
     void *dlHandle;
     const RIL_RadioFunctions *(*rilInit)(const struct RIL_Env *, int, char **);
-    const RIL_RadioFunctions *funcs_inst[NUM_CLIENTS] = {NULL, NULL};
+    const RIL_RadioFunctions *funcs_inst[NUM_CLIENTS] = {NULL, NULL, NULL};
     char libPath[PROPERTY_VALUE_MAX];
     unsigned char hasLibArgs = 0;
     int j = 0;
@@ -154,6 +169,8 @@ int main(int argc, char **argv)
         RIL_setRilSocketName("rild");
     } else if (strcmp(client, "1") == 0) {
         RIL_setRilSocketName("rild1");
+    } else if (strcmp(client, "2") == 0) {
+        RIL_setRilSocketName("rild2");
     }
 
     if (rilLibPath == NULL) {
@@ -315,6 +332,12 @@ OpenLib:
         ALOGE("RIL_Init argc = %d client = %s",argc, s_argv[argc-1]);
         funcs_inst[1] = rilInit(&s_rilEnv2, argc, s_argv);
         numClients++;
+        if (strncmp(getMultiSimConfiguration(), TSTS_PROPERTY, 4) == 0) {
+            s_argv[argc-1] = "2";  //client id incase of single rild managing three instances of RIL
+            ALOGE("RIL_Init argc = %d client = %s",argc, s_argv[argc-1]);
+            funcs_inst[2] = rilInit(&s_rilEnv3, argc, s_argv);
+            numClients++;
+        }
     }
 
     RIL_setMaxNumClients(numClients);
@@ -336,9 +359,14 @@ static int isMultiSimEnabled()
 {
     int enabled = 0;
     char prop_val[PROPERTY_VALUE_MAX];
-    if (property_get("persist.multisim.config", prop_val, "0") > 0)
-    {
-        if ((strncmp(prop_val, "dsds", 4) == 0) || (strncmp(prop_val, "dsda", 4) == 0)) {
+    int multi_sim_config_len = property_get("persist.multisim.config", prop_val, "0");
+    if (multi_sim_config_len > 0) {
+        if ((strncmp(prop_val, DSDS_PROPERTY, DSDS_PROPERTY_LENGTH) == 0
+                    && multi_sim_config_len == DSDS_PROPERTY_LENGTH)
+                || (strncmp(prop_val, DSDA_PROPERTY, DSDA_PROPERTY_LENGTH) == 0
+                    && multi_sim_config_len == DSDA_PROPERTY_LENGTH)
+                || (strncmp(prop_val, TSTS_PROPERTY, TSTS_PROPERTY_LENGTH) == 0
+                    && multi_sim_config_len == TSTS_PROPERTY_LENGTH)) {
             enabled = 1;
         }
         ALOGE("isMultiSimEnabled: prop_val = %s enabled = %d", prop_val, enabled);
@@ -358,4 +386,25 @@ static int isMultiRild()
         ALOGD("isMultiRild: prop_val = %s enabled = %d", prop_val, enabled);
     }
     return enabled;
+}
+
+static char* getMultiSimConfiguration()
+{
+    char prop_val[PROPERTY_VALUE_MAX];
+    int multi_sim_config_len = property_get("persist.multisim.config", prop_val, "0");
+    if (multi_sim_config_len > 0) {
+        if (strncmp(prop_val, DSDS_PROPERTY, DSDS_PROPERTY_LENGTH) == 0
+                    && multi_sim_config_len == DSDS_PROPERTY_LENGTH) {
+            return DSDS_PROPERTY;
+        } else if (strncmp(prop_val, DSDA_PROPERTY, DSDA_PROPERTY_LENGTH) == 0
+                    && multi_sim_config_len == DSDA_PROPERTY_LENGTH) {
+            return DSDA_PROPERTY;
+        } else if (strncmp(prop_val, TSTS_PROPERTY, TSTS_PROPERTY_LENGTH) == 0
+                    && multi_sim_config_len == TSTS_PROPERTY_LENGTH) {
+            return TSTS_PROPERTY;
+        } else {
+            return NON_MULTI_SIM_PROPERTY;
+        }
+    }
+    return NON_MULTI_SIM_PROPERTY;
 }
