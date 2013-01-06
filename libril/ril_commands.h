@@ -127,7 +127,6 @@
     {RIL_REQUEST_IMS_REGISTRATION_STATE, dispatchVoid, responseInts},
     {RIL_REQUEST_IMS_SEND_SMS, dispatchImsSms, responseSMS},
     {RIL_REQUEST_GET_DATA_CALL_PROFILE, dispatchInts, responseGetDataCallProfile},
-    {RIL_REQUEST_SET_TRANSMIT_POWER, dispatchInts, responseVoid},
     {RIL_REQUEST_SETUP_QOS,         dispatchStrings, responseStrings},
     {RIL_REQUEST_RELEASE_QOS,       dispatchStrings,  responseStrings},
     {RIL_REQUEST_GET_QOS_STATUS,   dispatchStrings, responseStrings},
@@ -139,3 +138,4 @@
     {RIL_REQUEST_GET_UICC_SUBSCRIPTION, dispatchVoid, responseUiccSubscription},
     {RIL_REQUEST_GET_DATA_SUBSCRIPTION, dispatchVoid, responseInts},
     {RIL_REQUEST_SET_SUBSCRIPTION_MODE, dispatchInts, responseVoid},
+    {RIL_REQUEST_SET_TRANSMIT_POWER, dispatchInts, responseVoid},
