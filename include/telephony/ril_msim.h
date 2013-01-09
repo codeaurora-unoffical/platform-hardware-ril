@@ -1,4 +1,7 @@
-/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ *
+ * Not a Contribution, Apache license notifications and license are retained
+ * for attribution purposes only.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,6 +37,11 @@
 extern "C" {
 #endif
 
+//To know the maximum ril instances
+#define MAX_PHONE_COUNT_SINGLE_SIM 1;
+#define MAX_PHONE_COUNT_DUAL_SIM 2;
+#define MAX_PHONE_COUNT_TRI_SIM 3;
+
 typedef enum {
   RIL_UICC_SUBSCRIPTION_DEACTIVATE = 0,
   RIL_UICC_SUBSCRIPTION_ACTIVATE = 1
@@ -41,7 +49,8 @@ typedef enum {
 
 typedef enum {
   RIL_SUBSCRIPTION_1 = 0,
-  RIL_SUBSCRIPTION_2 = 1
+  RIL_SUBSCRIPTION_2 = 1,
+  RIL_SUBSCRIPTION_3 = 2
 } RIL_SubscriptionType;
 
 typedef struct {
@@ -62,6 +71,8 @@ typedef struct {
 void RIL_onUnsolicitedResponse2(int unsolResponse, const void *data,
                                 size_t datalen);
 
+void RIL_onUnsolicitedResponse3(int unsolResponse, const void *data,
+                                size_t datalen);
 #ifdef __cplusplus
 }
 #endif

@@ -151,10 +151,11 @@ typedef struct {
 }RecordStreamInfo;
 
 /*******************************************************************/
-#define MAX_NUM_CLIENTS 2
+#define MAX_NUM_CLIENTS 3
 #define MAX_SOCKET_NAME_LENGTH 6
 #define SUB1 "SUB1"
 #define SUB2 "SUB2"
+#define SUB3 "SUB3"
 #define SUB_DATA_LENGTH 4
 
 RIL_RadioFunctions s_callbacks[MAX_NUM_CLIENTS] = {0, NULL, NULL, NULL, NULL, NULL};
@@ -170,7 +171,7 @@ static int s_fdListen = -1;
 static char rild[MAX_SOCKET_NAME_LENGTH] = {0};
 static int s_maxNumClients = MAX_NUM_CLIENTS;
 
-static int s_fdCommand[MAX_NUM_CLIENTS] ={-1,-1};
+static int s_fdCommand[MAX_NUM_CLIENTS] ={-1,-1,-1};
 static int s_fdDebug = -1;
 
 static int s_fdWakeupRead;
@@ -2991,6 +2992,9 @@ static void listenCallback (int fd, short flags, void *param) {
     } else if (strncmp(p_record, SUB2, SUB_DATA_LENGTH) == 0) {
         p_rsInfo->client_id = 1;
         ALOGI("Client ID :: %d", p_rsInfo->client_id);
+    } else if (strncmp(p_record, SUB3, SUB_DATA_LENGTH) == 0) {
+        p_rsInfo->client_id = 2;
+        ALOGI("Client ID :: %d", p_rsInfo->client_id);
     } else {
         ALOGE("Should not come here !!! buffer red :: %s", p_record);
     }
@@ -3059,6 +3063,9 @@ static void debugCallback (int fd, short flags, void *param) {
         ALOGI("Debug Client ID :: %d", client_id);
     } else if (strncmp(p_record, SUB2, SUB_DATA_LENGTH) == 0) {
         client_id = 1;
+        ALOGI("Debug Client ID :: %d", client_id);
+    } else if (strncmp(p_record, SUB3, SUB_DATA_LENGTH) == 0) {
+        client_id = 2;
         ALOGI("Debug Client ID :: %d", client_id);
     } else {
         ALOGE("Should not come here !!! debug socket buffer red :: %s", p_record);
@@ -3361,8 +3368,12 @@ RIL_register (const RIL_RadioFunctions *callbacks, int client_id) {
     char rildebug[12] = {0};
     if (strcmp(RIL_getRilSocketName(), "rild") == 0) {
         strcpy(rildebug, "rild-debug");
-    } else {
+    } else if (strcmp(RIL_getRilSocketName(), "rild1") == 0) {
         strcpy(rildebug, "rild-debug1");
+    } else if (strcmp(RIL_getRilSocketName(), "rild2") == 0) {
+        strcpy(rildebug, "rild-debug2");
+    } else {
+        ALOGE("Script error, please correct the script of rild.");
     }
 
     s_fdDebug = android_get_control_socket(rildebug);
@@ -3628,6 +3639,13 @@ RIL_onUnsolicitedResponse2(int unsolResponse, void *data,
                                 size_t datalen)
 {
     RIL_onUnsolicitedSendResponse(unsolResponse, data, datalen, 1);
+}
+
+extern "C" void
+RIL_onUnsolicitedResponse3(int unsolResponse, void *data,
+                                size_t datalen)
+{
+    RIL_onUnsolicitedSendResponse(unsolResponse, data, datalen, 2);
 }
 
 void
