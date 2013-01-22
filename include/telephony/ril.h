@@ -30,6 +30,7 @@ extern "C" {
 
 #define RIL_VERSION 7     /* Current version */
 #define RIL_VERSION_MIN 6 /* Minimum RIL_VERSION supported */
+#define RIL_QCOM_VERSION 3 /* Qualcomm internal RIL version */
 
 #define CDMA_ALPHA_INFO_BUFFER_LENGTH 64
 #define CDMA_NUMBER_INFO_BUFFER_LENGTH 81
@@ -494,6 +495,7 @@ typedef enum {
 } RIL_PersoSubstate;
 
 typedef enum {
+    RIL_APPSTATE_ILLEGAL               = -1,
     RIL_APPSTATE_UNKNOWN               = 0,
     RIL_APPSTATE_DETECTED              = 1,
     RIL_APPSTATE_PIN                   = 2, /* If PIN1 or UPin is required */
