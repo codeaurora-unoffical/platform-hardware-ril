@@ -3,6 +3,9 @@
 ** Copyright 2006, The Android Open Source Project
 ** Copyright (c) 2012, The Linux Foundation. All rights reserved.
 **
+** Not a Contribution, Apache license notifications and license are retained
+** for attribution purposes only.
+**
 ** Licensed under the Apache License, Version 2.0 (the "License");
 ** you may not use this file except in compliance with the License.
 ** You may obtain a copy of the License at
@@ -3585,7 +3588,7 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
 
     s_rilenv = env;
 
-    while ( -1 != (opt = getopt(argc, argv, "p:d:s:"))) {
+    while ( -1 != (opt = getopt(argc, argv, "p:d:s:c:"))) {
         switch (opt) {
             case 'p':
                 s_port = atoi(optarg);
@@ -3605,6 +3608,10 @@ const RIL_RadioFunctions *RIL_Init(const struct RIL_Env *env, int argc, char **a
                 s_device_path   = optarg;
                 s_device_socket = 1;
                 ALOGI("Opening socket %s\n", s_device_path);
+            break;
+
+            case 'c':
+                //TODO:This will be handled when DSDS two rild emualtor support is mainlined.
             break;
 
             default:
