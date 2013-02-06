@@ -3797,6 +3797,7 @@ typedef struct {
 
 /***********************************************************************/
 
+#define RIL_REQUEST_ENABLE_ENGINEER_MODE 123
 
 
 #define RIL_UNSOL_RESPONSE_BASE 1000
@@ -4345,6 +4346,10 @@ typedef struct {
  *
  */
 #define RIL_UNSOL_UICC_SUBSCRIPTION_STATUS_CHANGED 1041
+/**
+ * RIL_UNSOL_ENGINEER_MODE
+ */
+#define RIL_UNSOL_ENGINEER_MODE 1042
 
 /***********************************************************************/
 

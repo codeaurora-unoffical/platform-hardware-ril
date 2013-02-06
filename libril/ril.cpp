@@ -259,8 +259,9 @@ static int responseCdmaSignalInfoRecord(Parcel &p,void *response, size_t respons
 static int responseCdmaCallWaiting(Parcel &p,void *response, size_t responselen);
 static int responseSimRefresh(Parcel &p, void *response, size_t responselen);
 static int responseGetDataCallProfile(Parcel &p, void *response, size_t responselen);
-static int responseSSData(Parcel &p, void *response, size_t responselen);
+static int responseEngineerMode(Parcel &p, void *response, size_t responselen);
 static int responseUiccSubscription(Parcel &p, void *response,size_t responselen);
+static int responseSSData(Parcel &p, void *response, size_t responselen);
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
 static int decodeCdmaSubscriptionSource (RIL_RadioState radioState);
@@ -2374,6 +2375,23 @@ static int responseCallRing(Parcel &p, void *response, size_t responselen) {
     }
 }
 
+static int responseEngineerMode(Parcel &p, void *response, size_t responselen) {
+    int i;
+
+    if (response == NULL && responselen != 0)
+    {
+        ALOGE("invalid Engineer Mode response length  %d" ,responselen );
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    p.writeInt32(responselen/2);
+    for ( i = 0; i < responselen/2;i++ )
+    {
+        p.writeInt32(((unsigned short*)response)[i]);
+    }
+    return 0;
+}
+
 static int responseCdmaSignalInfoRecord(Parcel &p, void *response, size_t responselen) {
     if (response == NULL || responselen == 0) {
         ALOGE("invalid response: NULL");
@@ -4001,6 +4019,7 @@ requestToString(int request) {
         case RIL_REQUEST_GET_UICC_SUBSCRIPTION: return "REQUEST_GET_UICC_SUBSCRIPTION";
         case RIL_REQUEST_GET_DATA_SUBSCRIPTION: return "REQUEST_GET_DATA_SUBSCRIPTION";
         case RIL_REQUEST_SET_SUBSCRIPTION_MODE: return "REQUEST_SET_SUBSCRIPTION_MODE";
+        case RIL_REQUEST_ENABLE_ENGINEER_MODE: return "RIL_REQUEST_ENABLE_ENGINEER_MODE";
         case RIL_UNSOL_RESPONSE_RADIO_STATE_CHANGED: return "UNSOL_RESPONSE_RADIO_STATE_CHANGED";
         case RIL_UNSOL_RESPONSE_CALL_STATE_CHANGED: return "UNSOL_RESPONSE_CALL_STATE_CHANGED";
         case RIL_UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED: return "UNSOL_RESPONSE_VOICE_NETWORK_STATE_CHANGED";
