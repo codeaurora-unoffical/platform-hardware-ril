@@ -644,6 +644,19 @@ typedef struct
   RIL_AppStatus applications[RIL_CARD_MAX_APPS];
 } RIL_CardStatus_v6;
 
+typedef struct
+{
+  int pin1_num_retries;
+  int puk1_num_retries;
+  int pin2_num_retries;
+  int puk2_num_retries;
+} RIL_PinStatus;
+
+typedef struct {
+  RIL_CardStatus_v6 v6;
+  RIL_PinStatus application_pins[RIL_CARD_MAX_APPS];
+} RIL_CardStatus_v7;
+
 /** The result of a SIM refresh, returned in data[0] of RIL_UNSOL_SIM_REFRESH
  *      or as part of RIL_SimRefreshResponse_v6
  */
