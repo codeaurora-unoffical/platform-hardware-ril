@@ -2711,7 +2711,7 @@ static void rilEventAddWakeup(struct ril_event *ev) {
     triggerEvLoop();
 }
 
-static void sendSimStatusAppInfo(Parcel &p, int num_apps, RIL_AppStatus appStatus[]) {
+static void sendSimStatusAppInfo(Parcel &p, int num_apps, RIL_AppStatus appStatus[], RIL_PinStatus appPins[]) {
         p.writeInt32(num_apps);
         startResponse;
         for (int i = 0; i < num_apps; i++) {
@@ -2736,6 +2736,14 @@ static void sendSimStatusAppInfo(Parcel &p, int num_apps, RIL_AppStatus appStatu
                     appStatus[i].pin1,
                     appStatus[i].pin2);
         }
+        if (appPins) {
+          for (int i = 0; i < num_apps; i++) {
+            p.writeInt32(appPins[i].pin1_num_retries);
+            p.writeInt32(appPins[i].puk1_num_retries);
+            p.writeInt32(appPins[i].pin2_num_retries);
+            p.writeInt32(appPins[i].puk2_num_retries);
+          }
+        }
         closeResponse;
 }
 
@@ -2747,7 +2755,18 @@ static int responseSimStatus(Parcel &p, void *response, size_t responselen) {
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
-    if (responselen == sizeof (RIL_CardStatus_v6)) {
+    if (responselen == sizeof (RIL_CardStatus_v7)) {
+        RIL_CardStatus_v6 *p_cur = ((RIL_CardStatus_v6 *) response);
+        RIL_CardStatus_v7 *p_cur_v7 = ((RIL_CardStatus_v7 *) response);
+
+        p.writeInt32(p_cur->card_state);
+        p.writeInt32(p_cur->universal_pin_state);
+        p.writeInt32(p_cur->gsm_umts_subscription_app_index);
+        p.writeInt32(p_cur->cdma_subscription_app_index);
+        p.writeInt32(p_cur->ims_subscription_app_index);
+
+        sendSimStatusAppInfo(p, p_cur->num_applications, p_cur->applications, p_cur_v7->application_pins);
+    } else if (responselen == sizeof (RIL_CardStatus_v6)) {
         RIL_CardStatus_v6 *p_cur = ((RIL_CardStatus_v6 *) response);
 
         p.writeInt32(p_cur->card_state);
@@ -2756,7 +2775,7 @@ static int responseSimStatus(Parcel &p, void *response, size_t responselen) {
         p.writeInt32(p_cur->cdma_subscription_app_index);
         p.writeInt32(p_cur->ims_subscription_app_index);
 
-        sendSimStatusAppInfo(p, p_cur->num_applications, p_cur->applications);
+        sendSimStatusAppInfo(p, p_cur->num_applications, p_cur->applications, 0);
     } else if (responselen == sizeof (RIL_CardStatus_v5)) {
         RIL_CardStatus_v5 *p_cur = ((RIL_CardStatus_v5 *) response);
 
@@ -2766,7 +2785,7 @@ static int responseSimStatus(Parcel &p, void *response, size_t responselen) {
         p.writeInt32(p_cur->cdma_subscription_app_index);
         p.writeInt32(-1);
 
-        sendSimStatusAppInfo(p, p_cur->num_applications, p_cur->applications);
+        sendSimStatusAppInfo(p, p_cur->num_applications, p_cur->applications, 0);
     } else {
         RLOGE("responseSimStatus: A RilCardStatus_v6 or _v5 expected\n");
         return RIL_ERRNO_INVALID_RESPONSE;
