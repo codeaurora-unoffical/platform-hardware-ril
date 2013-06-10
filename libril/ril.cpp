@@ -2307,11 +2307,11 @@ static int responseRilSignalStrength(Parcel &p,
             if (responselen >= sizeof (RIL_SignalStrength_v7)) {
                 p.writeInt32(p_cur->TD_SCDMA_SignalStrength.rscp);
             } else {
-                memset(&p_cur->TD_SCDMA_SignalStrength, sizeof (RIL_TD_SCDMA_SignalStrength), 0);
+                memset(&p_cur->TD_SCDMA_SignalStrength, 0, sizeof (RIL_TD_SCDMA_SignalStrength));
             }
         } else {
-            memset(&p_cur->LTE_SignalStrength, sizeof (RIL_LTE_SignalStrength), 0);
-            memset(&p_cur->TD_SCDMA_SignalStrength, sizeof (RIL_TD_SCDMA_SignalStrength), 0);
+            memset(&p_cur->LTE_SignalStrength, 0, sizeof (RIL_LTE_SignalStrength));
+            memset(&p_cur->TD_SCDMA_SignalStrength, 0, sizeof (RIL_TD_SCDMA_SignalStrength));
         }
 
         startResponse;
