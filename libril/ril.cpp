@@ -3021,6 +3021,22 @@ static void listenCallback (int fd, short flags, void *param) {
 
     ALOGI("libril: new connection");
 
+    bool isAllClientsConnected = true;
+    for (int i = 0; i < s_maxNumClients; i++) {
+        if (s_fdCommand[i] == -1) {
+            isAllClientsConnected = false;
+            break;
+        }
+    }
+
+    if (isAllClientsConnected) {
+        // s_listen_event is persistent. So, delete the listen event from
+        // the watch list so that it doesn't get piled up.
+        ALOGI("All clients are connected remove listen socket from watch table");
+        ril_event_del(&s_listen_event); //All clients are connected so no need of listen socket
+    }
+
+
     ret = fcntl(fd, F_SETFL, O_NONBLOCK);
 
     if (ret < 0) {
