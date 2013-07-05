@@ -57,7 +57,7 @@
 
 namespace android {
 
-#define PHONE_PROCESS "radio"
+#define PHONE_PROCESS "root"
 
 #define ANDROID_WAKE_LOCK_NAME "radio-interface"
 
