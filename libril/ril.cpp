@@ -3017,6 +3017,9 @@ static void listenCallback (int fd, short flags, void *param) {
         ALOGE("Should not come here !!! buffer red :: %s", p_record);
     }
 
+    free(p_record);
+    p_record = NULL;
+
     s_fdCommand[p_rsInfo->client_id] = fd;
 
     ALOGI("libril: new connection");
@@ -3085,6 +3088,9 @@ static void debugCallback (int fd, short flags, void *param) {
     } else {
         ALOGE("Should not come here !!! debug socket buffer red :: %s", p_record);
     }
+
+    free(p_record);
+    p_record = NULL;
 
     s_fdCommand[client_id] = acceptFD;
 
