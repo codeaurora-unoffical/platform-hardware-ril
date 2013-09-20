@@ -54,7 +54,7 @@
 
 namespace android {
 
-#define PHONE_PROCESS "radio"
+#define PHONE_PROCESS "root"
 
 #define SOCKET_NAME_RIL "rild"
 #define SOCKET2_NAME_RIL "rild2"
