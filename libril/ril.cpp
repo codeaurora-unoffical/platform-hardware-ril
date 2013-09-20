@@ -52,7 +52,7 @@ extern "C" void
 RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response, size_t responselen);
 namespace android {
 
-#define PHONE_PROCESS "radio"
+#define PHONE_PROCESS "root"
 #define BLUETOOTH_PROCESS "bluetooth"
 
 #define SOCKET_NAME_RIL "rild"
