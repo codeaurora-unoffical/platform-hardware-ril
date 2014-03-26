@@ -1889,12 +1889,64 @@ static int responseDataCallListV4(Parcel &p, void *response, size_t responselen)
     return 0;
 }
 
+static int responseDataCallListV7CAF(Parcel &p, void *response, size_t responselen)
+{
+    if (response == NULL && responselen != 0) {
+        RLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    if (responselen % sizeof(RIL_Data_Call_Response_v6) == 0) {
+        //Size of v6 is 36 bytes and v7 is 41. So, we should not reach here
+        RLOGE("Length %d is multiple of both RIL_Response_v6 and RIL_Response_v7_CAF",
+                responselen);
+        return RIL_ERRNO_INVALID_RESPONSE;
+    }
+
+    int num = responselen / sizeof(RIL_Data_Call_Response_v7_CAF);
+    p.writeInt32(num);
+
+    RIL_Data_Call_Response_v7_CAF *p_cur = (RIL_Data_Call_Response_v7_CAF *) response;
+    startResponse;
+    int i;
+    for (i = 0; i < num; i++) {
+        p.writeInt32((int)p_cur[i].status);
+        p.writeInt32(p_cur[i].suggestedRetryTime);
+        p.writeInt32(p_cur[i].cid);
+        p.writeInt32(p_cur[i].active);
+        writeStringToParcel(p, p_cur[i].type);
+        writeStringToParcel(p, p_cur[i].ifname);
+        writeStringToParcel(p, p_cur[i].addresses);
+        writeStringToParcel(p, p_cur[i].dnses);
+        writeStringToParcel(p, p_cur[i].gateways);
+        p.writeInt32(p_cur[i].mtu);
+        appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s,mtu=%d],", printBuf,
+            p_cur[i].status,
+            p_cur[i].suggestedRetryTime,
+            p_cur[i].cid,
+            (p_cur[i].active==0)?"down":"up",
+            (char*)p_cur[i].type,
+            (char*)p_cur[i].ifname,
+            (char*)p_cur[i].addresses,
+            (char*)p_cur[i].dnses,
+            (char*)p_cur[i].gateways,
+            p_cur[i].mtu);
+    }
+    removeLastChar;
+    closeResponse;
+
+    return 0;
+}
+
+
 static int responseDataCallList(Parcel &p, void *response, size_t responselen)
 {
     // Write version
     p.writeInt32(s_callbacks.version);
 
-    if (s_callbacks.version < 5) {
+    if (responselen % sizeof(RIL_Data_Call_Response_v7_CAF) == 0) {
+        return responseDataCallListV7CAF(p, response, responselen);
+    } else if (s_callbacks.version < 5) {
         return responseDataCallListV4(p, response, responselen);
     } else {
         if (response == NULL && responselen != 0) {
@@ -1924,6 +1976,8 @@ static int responseDataCallList(Parcel &p, void *response, size_t responselen)
             writeStringToParcel(p, p_cur[i].addresses);
             writeStringToParcel(p, p_cur[i].dnses);
             writeStringToParcel(p, p_cur[i].gateways);
+            //Did not get MTU value in data call response. Send value=0 to frameworks
+            p.writeInt32(0);
             appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s],", printBuf,
                 p_cur[i].status,
                 p_cur[i].suggestedRetryTime,
