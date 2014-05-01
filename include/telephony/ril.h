@@ -44,6 +44,8 @@ extern "C" {
 #define MAX_DEBUG_SOCKET_NAME_LENGTH 12
 #define MAX_QEMU_PIPE_NAME_LENGTH  11
 
+#define FEATURE_MTU_CAF 1
+
 typedef void * RIL_Token;
 
 typedef enum {
@@ -79,7 +81,10 @@ typedef enum {
     RIL_E_SS_MODIFIED_TO_DIAL = 23,             /* SS request modified to DIAL */
     RIL_E_SS_MODIFIED_TO_USSD = 24,             /* SS request modified to USSD */
     RIL_E_SS_MODIFIED_TO_SS = 25,               /* SS request modified to different SS request */
-    RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 26       /* Subscription not supported by RIL */
+    RIL_E_SUBSCRIPTION_NOT_SUPPORTED = 26,      /* Subscription not supported by RIL */
+    RIL_E_MISSING_RESOURCE = 27,                /* No logical channel available */
+    RIL_E_NO_SUCH_ELEMENT = 28,                 /* Application not found on sim */
+    RIL_E_INVALID_PARAMETER = 29                /* To Do: add description*/
 } RIL_Errno;
 
 typedef enum {
@@ -267,6 +272,43 @@ typedef struct {
                                    to point connections. */
 } RIL_Data_Call_Response_v6;
 
+typedef struct __attribute__ ((__packed__)) {
+    int             status;     /* A RIL_DataCallFailCause, 0 which is PDP_FAIL_NONE if no error */
+    int             suggestedRetryTime; /* If status != 0, this fields indicates the suggested retry
+                                           back-off timer value RIL wants to override the one
+                                           pre-configured in FW.
+                                           The unit is miliseconds.
+                                           The value < 0 means no value is suggested.
+                                           The value 0 means retry should be done ASAP.
+                                           The value of INT_MAX(0x7fffffff) means no retry. */
+    int             cid;        /* Context ID, uniquely identifies this call */
+    int             active;     /* 0=inactive, 1=active/physical link down, 2=active/physical link up */
+    char *          type;       /* One of the PDP_type values in TS 27.007 section 10.1.1.
+                                   For example, "IP", "IPV6", "IPV4V6", or "PPP". If status is
+                                   PDP_FAIL_ONLY_SINGLE_BEARER_ALLOWED this is the type supported
+                                   such as "IP" or "IPV6" */
+    char *          ifname;     /* The network interface name */
+    char *          addresses;  /* A space-delimited list of addresses with optional "/" prefix length,
+                                   e.g., "192.0.1.3" or "192.0.1.11/16 2001:db8::1/64".
+                                   May not be empty, typically 1 IPv4 or 1 IPv6 or
+                                   one of each. If the prefix length is absent the addresses
+                                   are assumed to be point to point with IPv4 having a prefix
+                                   length of 32 and IPv6 128. */
+    char *          dnses;      /* A space-delimited list of DNS server addresses,
+                                   e.g., "192.0.1.3" or "192.0.1.11 2001:db8::1".
+                                   May be empty. */
+    char *          gateways;   /* A space-delimited list of default gateway addresses,
+                                   e.g., "192.0.1.3" or "192.0.1.11 2001:db8::1".
+                                   May be empty in which case the addresses represent point
+                                   to point connections. */
+    int             mtu;        /* MTU received from network
+                                   Value <= 0 means network has either not sent a value or
+                                   sent an invalid value */
+    char            extraByte;  /* Add an extra byte to increase the size of structure to
+                                   a prime number so that we never get an array of data call
+                                   responses which can be a multiple of both v6 and v7 types */
+} RIL_Data_Call_Response_v7_CAF;
+
 typedef enum {
     RADIO_TECH_3GPP = 1, /* 3GPP Technologies - GSM, WCDMA */
     RADIO_TECH_3GPP2 = 2 /* 3GPP2 Technologies - CDMA */
@@ -351,6 +393,7 @@ typedef struct {
     char *data;     /* May be NULL*/
     char *pin2;     /* May be NULL*/
     char *aidPtr;   /* AID value, See ETSI 102.221 8.1 and 101.220 4, NULL if no value. */
+    int cla;        /* Class of the APDU command */
 } RIL_SIM_IO_v6;
 
 typedef struct {
@@ -3793,6 +3836,96 @@ typedef struct {
  *
  */
 #define RIL_REQUEST_SET_DATA_SUBSCRIPTION  116
+
+/**
+ * RIL_REQUEST_SIM_TRANSMIT_BASIC
+ *
+ * Request APDU exchange on the basic channel.
+ *
+ * "data" is a const RIL_SIM_IO *
+ *
+ * "response" is a const RIL_SIM_IO_Response *
+ *
+ * Valid errors:
+ *
+ * SUCCESS
+ * GENERIC_FAILURE
+ * INVALID_PARAMETER
+ */
+#define RIL_REQUEST_SIM_TRANSMIT_BASIC 117
+
+/**
+ * RIL_REQUEST_SIM_OPEN_CHANNEL
+ *
+ * Open a new logical channel.
+ *
+ * "data" is a const char * containing the AID of the applet
+ *
+ * "response" is a int * containing the channel id
+ *
+ * Valid errors:
+ *
+ * SUCCESS
+ * GENERIC_FAILURE
+ * MISSING_RESOURCE
+ * NO_SUCH_ELEMENT
+ */
+#define RIL_REQUEST_SIM_OPEN_CHANNEL 118
+
+/**
+ * RIL_REQUEST_SIM_CLOSE_CHANNEL
+ *
+ * Close a previoulsy opened logical channel.
+ *
+ * "data" is a const int * containing the channel id
+ *
+ * "response" is NULL
+ *
+ * Valid errors:
+ *
+ * SUCCESS
+ * GENERIC_FAILURE
+ * INVALID_PARAMETER
+ */
+#define RIL_REQUEST_SIM_CLOSE_CHANNEL 119
+
+/**
+ * RIL_REQUEST_SIM_TRANSMIT_CHANNEL
+ *
+ * Exchange APDUs with a UICC over a previously opened logical channel.
+ *
+ * "data" is a const RIL_SIM_IO_v6 *
+ *
+ * "response" is a const RIL_SIM_IO_Response *
+ *
+ * Valid errors:
+ *
+ * SUCCESS
+ * GENERIC_FAILURE
+ * INVALID_PARAMETER
+ */
+#define RIL_REQUEST_SIM_TRANSMIT_CHANNEL 120
+
+/**
+ * RIL_REQUEST_SIM_GET_ATR
+ *
+ * Get the ATR from SIM Card
+ *
+ * Only valid when radio state is "RADIO_STATE_ON"
+ *
+ * "data" is const int *
+ * ((const int *)data)[0] contains the slot index on the SIM from which ATR is requested.
+ *
+ * "response" is a const char * containing the ATR, See ETSI 102.221 8.1 and ISO/IEC 7816 3
+ *
+ * Valid errors:
+ *
+ * SUCCESS
+ * RADIO_NOT_AVAILABLE (radio resetting)
+ * GENERIC_FAILURE
+ */
+
+#define RIL_REQUEST_SIM_GET_ATR 121
 
 /***********************************************************************/
 
