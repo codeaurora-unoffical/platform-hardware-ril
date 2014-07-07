@@ -70,6 +70,7 @@
 #define MDM_EVDO        0x08
 #define MDM_LTE         0x10
 
+#define DEFAULT_MTU 1400
 typedef struct {
     int supportedTechs; // Bitmask of supported Modem Technology bits
     int currentTech;    // Technology the modem is currently using (in the format used by modem)
@@ -431,8 +432,8 @@ static void requestOrSendDataCallList(RIL_Token *t)
          p_cur = p_cur->p_next)
         n++;
 
-    RIL_Data_Call_Response_v6 *responses =
-        alloca(n * sizeof(RIL_Data_Call_Response_v6));
+    RIL_Data_Call_Response_v7_CAF *responses =
+        alloca(n * sizeof(RIL_Data_Call_Response_v7_CAF));
 
     int i;
     for (i = 0; i < n; i++) {
@@ -445,9 +446,10 @@ static void requestOrSendDataCallList(RIL_Token *t)
         responses[i].addresses = "";
         responses[i].dnses = "";
         responses[i].gateways = "";
+        responses[i].mtu = 0;
     }
 
-    RIL_Data_Call_Response_v6 *response = responses;
+    RIL_Data_Call_Response_v7_CAF *response = responses;
     for (p_cur = p_response->p_intermediates; p_cur != NULL;
          p_cur = p_cur->p_next) {
         char *line = p_cur->line;
@@ -564,6 +566,7 @@ static void requestOrSendDataCallList(RIL_Token *t)
 
                 /* There is only on gateway in the emulator */
                 responses[i].gateways = "10.0.2.2";
+                responses[i].mtu = DEFAULT_MTU;
             }
             else {
                 /* I don't know where we are, so use the public Google DNS
@@ -579,11 +582,11 @@ static void requestOrSendDataCallList(RIL_Token *t)
 
     if (t != NULL)
         RIL_onRequestComplete(*t, RIL_E_SUCCESS, responses,
-                              n * sizeof(RIL_Data_Call_Response_v6));
+                              n * sizeof(RIL_Data_Call_Response_v7_CAF));
     else
         RIL_onUnsolicitedResponse(RIL_UNSOL_DATA_CALL_LIST_CHANGED,
                                   responses,
-                                  n * sizeof(RIL_Data_Call_Response_v6));
+                                  n * sizeof(RIL_Data_Call_Response_v7_CAF));
 
     return;
 
