@@ -93,12 +93,23 @@ void switchUser() {
     setuid(AID_RADIO);
 
     struct __user_cap_header_struct header;
+#ifdef CAP_BLOCK_SUSPEND
+    struct __user_cap_data_struct cap[2];
+    header.version = _LINUX_CAPABILITY_VERSION_3;
+    header.pid = 0;
+    cap[0].effective = cap[0].permitted = CAP_TO_MASK(CAP_NET_ADMIN) | CAP_TO_MASK(CAP_NET_RAW);
+    cap[1].effective = cap[1].permitted = CAP_TO_MASK(CAP_BLOCK_SUSPEND);
+    cap[0].inheritable = 0;
+    cap[1].inheritable = 0;
+    capset(&header, cap);
+#else
     struct __user_cap_data_struct cap;
     header.version = _LINUX_CAPABILITY_VERSION;
     header.pid = 0;
     cap.effective = cap.permitted = (1 << CAP_NET_ADMIN) | (1 << CAP_NET_RAW);
     cap.inheritable = 0;
     capset(&header, &cap);
+#endif
 }
 
 int main(int argc, char **argv)
