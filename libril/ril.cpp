@@ -718,6 +718,7 @@ invalid:
  *   String data
  *   String pin2
  *   String aidPtr
+ *   int32_t cla
  */
 static void
 dispatchSIM_IO (Parcel &p, RequestInfo *pRI) {
@@ -755,11 +756,19 @@ dispatchSIM_IO (Parcel &p, RequestInfo *pRI) {
     simIO.v6.pin2 = strdupReadString(p);
     simIO.v6.aidPtr = strdupReadString(p);
 
+    simIO.v6.cla = 0;
+    if(pRI->pCI->requestNumber == RIL_REQUEST_SIM_TRANSMIT_BASIC ||
+            pRI->pCI->requestNumber == RIL_REQUEST_SIM_TRANSMIT_CHANNEL ) {
+        status = p.readInt32(&t);
+        simIO.v6.cla = (int)t;
+    }
+
     startRequest;
     appendPrintBuf("%scmd=0x%X,efid=0x%X,path=%s,%d,%d,%d,%s,pin2=%s,aid=%s", printBuf,
         simIO.v6.command, simIO.v6.fileid, (char*)simIO.v6.path,
         simIO.v6.p1, simIO.v6.p2, simIO.v6.p3,
         (char*)simIO.v6.data,  (char*)simIO.v6.pin2, simIO.v6.aidPtr);
+
     closeRequest;
     printRequest(pRI->token, pRI->pCI->requestNumber);
 
@@ -3966,6 +3975,11 @@ requestToString(int request) {
         case RIL_REQUEST_SEND_SMS_EXPECT_MORE: return "SEND_SMS_EXPECT_MORE";
         case RIL_REQUEST_SETUP_DATA_CALL: return "SETUP_DATA_CALL";
         case RIL_REQUEST_SIM_IO: return "SIM_IO";
+        case RIL_REQUEST_SIM_TRANSMIT_BASIC: return "SIM_TRANSMIT_BASIC";
+        case RIL_REQUEST_SIM_OPEN_CHANNEL: return "SIM_OPEN_CHANNEL";
+        case RIL_REQUEST_SIM_CLOSE_CHANNEL: return "SIM_CLOSE_CHANNEL";
+        case RIL_REQUEST_SIM_TRANSMIT_CHANNEL: return "SIM_TRANSMIT_CHANNEL";
+        case RIL_REQUEST_SIM_GET_ATR: return "SIM_GET_ATR";
         case RIL_REQUEST_SEND_USSD: return "SEND_USSD";
         case RIL_REQUEST_CANCEL_USSD: return "CANCEL_USSD";
         case RIL_REQUEST_GET_CLIR: return "GET_CLIR";
