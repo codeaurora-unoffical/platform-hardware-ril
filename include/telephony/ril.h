@@ -3884,6 +3884,23 @@ typedef struct {
 
 #define RIL_REQUEST_SIM_GET_ATR 121
 
+/**
+ * RIL_REQUEST_ON_DEMAND_PS_ATTACH
+ *
+ * Request on demand ps attach/detach on non-dds subscription
+ *
+ *
+ * "data" is const int *
+ * ((const int *)data)[0] int value, 1 = ATTACH, 0 = DETACH.
+ *
+ *
+ * Valid errors:
+ *
+ * SUCCESS
+ * RADIO_NOT_AVAILABLE (radio resetting)
+ * GENERIC_FAILURE
+ */
+#define RIL_REQUEST_ON_DEMAND_PS_ATTACH 122
 /***********************************************************************/
 
 

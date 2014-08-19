@@ -70,6 +70,13 @@
 #define MDM_EVDO        0x08
 #define MDM_LTE         0x10
 
+//subId(1Byte), RAT mask(4bytes), voice_data_cap(1byte), max_data_cap(1byte)
+unsigned char p_data1[] = {  0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x02};
+unsigned char p_data2[] = {  0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x02};
+
+unsigned char p_dataUnsol1[] = {0x51, 0x4f, 0x45, 0x4d, 0x48, 0x4f, 0x4f, 0x4b, 0xfc, 0x03, 0x08, 0x00, 0x07,0x0,0x0,0x0,     0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x02};
+unsigned char p_dataUnsol2[] = {0x51, 0x4f, 0x45, 0x4d, 0x48, 0x4f, 0x4f, 0x4b, 0xfc, 0x03, 0x08, 0x00, 0x07,0x0,0x0,0x0,     0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x02};
+
 typedef struct {
     int supportedTechs; // Bitmask of supported Modem Technology bits
     int currentTech;    // Technology the modem is currently using (in the format used by modem)
@@ -398,6 +405,26 @@ error:
 }
 
 static void requestOrSendDataCallList(RIL_Token *t);
+
+
+static void sendUnsolOemHook()
+{
+    if (strcmp(ril_inst_id, "0") == 0) {
+        RLOGE("sendUnsolOemHook on sub0");
+        RIL_onUnsolicitedResponse(RIL_UNSOL_OEM_HOOK_RAW,
+                p_dataUnsol1,
+                sizeof(p_dataUnsol1));
+
+    } else {
+        RLOGE("sendUnsolOemHook on sub1");
+        RIL_onUnsolicitedResponse(RIL_UNSOL_OEM_HOOK_RAW,
+                p_dataUnsol2,
+                sizeof(p_dataUnsol2));
+
+    }
+}
+
+
 
 static void onDataCallListChanged(void *param)
 {
@@ -789,6 +816,14 @@ static void setUiccSubscription(int request, void *data, size_t datalen, RIL_Tok
 static void setDataSubscription(int request, void *data, size_t datalen, RIL_Token t)
 {
     RLOGD("setDataSubscriptionSource()") ;
+    // TODO: DSDS: Need to implement this.
+    // workaround: send success for now.
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
+}
+
+static void reqeustOnDemandPsAttach(int request, void *data, size_t datalen, RIL_Token t)
+{
+    RLOGD("reqeustOnDemandPsAttach()") ;
     // TODO: DSDS: Need to implement this.
     // workaround: send success for now.
     RIL_onRequestComplete(t, RIL_E_SUCCESS, NULL, 0);
@@ -2370,6 +2405,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_SET_DATA_SUBSCRIPTION:
             setDataSubscription(request, data, datalen, t);
+            break;
+
+        case RIL_REQUEST_ON_DEMAND_PS_ATTACH:
+            reqeustOnDemandPsAttach(request, data, datalen, t);
             break;
 
         /* CDMA Specific Requests */
