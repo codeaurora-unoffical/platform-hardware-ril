@@ -100,6 +100,7 @@ typedef enum {
                                                    illegal SIM or ME */
     RIL_E_MISSING_RESOURCE = 16,                /* no logical channel available */
     RIL_E_NO_SUCH_ELEMENT = 17,                 /* application not found on SIM */
+    RIL_E_INVALID_PARAMETER = 18
 } RIL_Errno;
 
 typedef enum {
@@ -4089,6 +4090,19 @@ typedef struct {
  */
 #define RIL_REQUEST_SHUTDOWN 129
 
+/**
+ * RIL_REQUEST_SIM_GET_ATR
+ *
+ * Retrieves the ATR from the UICC.
+ *
+ * "data" is null
+ * "response" is const char * to the ATR.
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  GENERIC_FAILURE
+ */
+#define RIL_REQUEST_SIM_GET_ATR 130
 
 /***********************************************************************/
 

@@ -4711,6 +4711,7 @@ requestToString(int request) {
         case RIL_UNSOL_HARDWARE_CONFIG_CHANGED: return "HARDWARE_CONFIG_CHANGED";
         case RIL_UNSOL_DC_RT_INFO_CHANGED: return "UNSOL_DC_RT_INFO_CHANGED";
         case RIL_REQUEST_SHUTDOWN: return "SHUTDOWN";
+        case RIL_REQUEST_SIM_GET_ATR: return "SIM_GET_ATR";
         default: return "<unknown request>";
     }
 }
