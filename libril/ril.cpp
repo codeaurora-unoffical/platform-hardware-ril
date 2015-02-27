@@ -1858,7 +1858,7 @@ static void dispatchUiccSubscripton(Parcel &p, RequestInfo *pRI) {
     startRequest;
     appendPrintBuf("slot=%d, app_index=%d, act_status = %d", uicc_sub.slot, uicc_sub.app_index,
             uicc_sub.act_status);
-    RLOGD("dispatchUiccSubscription, slot=%d, app_index=%d, act_status = %d", uicc_sub.slot,
+    RLOGV("dispatchUiccSubscription, slot=%d, app_index=%d, act_status = %d", uicc_sub.slot,
             uicc_sub.app_index, uicc_sub.act_status);
     closeRequest;
     printRequest(pRI->token, pRI->pCI->requestNumber);
@@ -3622,7 +3622,7 @@ static int responseCdmaSms(Parcel &p, void *response, size_t responselen) {
     uint8_t uct;
     void* dest;
 
-    RLOGD("Inside responseCdmaSms");
+    RLOGV("Inside responseCdmaSms");
 
     if (response == NULL && responselen != 0) {
         RLOGE("invalid response: NULL");
