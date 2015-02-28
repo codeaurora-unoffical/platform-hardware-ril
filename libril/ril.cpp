@@ -471,7 +471,7 @@ processCommandBuffer(void *buffer, size_t buflen, RIL_SOCKET_ID socket_id) {
     status = p.readInt32(&request);
     status = p.readInt32 (&token);
 
-    RLOGD("SOCKET %s REQUEST: %s length:%d", rilSocketIdToString(socket_id), requestToString(request), buflen);
+    RLOGV("SOCKET %s REQUEST: %s length:%d", rilSocketIdToString(socket_id), requestToString(request), buflen);
 
 #if (SIM_COUNT >= 2)
     if (socket_id == RIL_SOCKET_2) {
@@ -1831,7 +1831,7 @@ static void dispatchUiccSubscripton(Parcel &p, RequestInfo *pRI) {
     startRequest;
     appendPrintBuf("slot=%d, app_index=%d, act_status = %d", uicc_sub.slot, uicc_sub.app_index,
             uicc_sub.act_status);
-    RLOGD("dispatchUiccSubscription, slot=%d, app_index=%d, act_status = %d", uicc_sub.slot,
+    RLOGV("dispatchUiccSubscription, slot=%d, app_index=%d, act_status = %d", uicc_sub.slot,
             uicc_sub.app_index, uicc_sub.act_status);
     closeRequest;
     printRequest(pRI->token, pRI->pCI->requestNumber);
@@ -1996,7 +1996,7 @@ sendResponseRaw (const void *data, size_t dataSize, RIL_SOCKET_ID socket_id) {
     uint32_t header;
     pthread_mutex_t * writeMutexHook = &s_writeMutex;
 
-    RLOGE("Send Response to %s", rilSocketIdToString(socket_id));
+    RLOGV("Send Response to %s", rilSocketIdToString(socket_id));
 
 #if (SIM_COUNT >= 2)
     if (socket_id == RIL_SOCKET_2) {
@@ -3413,7 +3413,7 @@ static int responseCdmaSms(Parcel &p, void *response, size_t responselen) {
     uint8_t uct;
     void* dest;
 
-    RLOGD("Inside responseCdmaSms");
+    RLOGV("Inside responseCdmaSms");
 
     if (response == NULL && responselen != 0) {
         RLOGE("invalid response: NULL");
@@ -3489,14 +3489,14 @@ static int responseDcRtInfo(Parcel &p, void *response, size_t responselen)
 static int responseGetDataCallProfile(Parcel &p, void *response, size_t responselen) {
     int num = 0;
 
-    RLOGD("[OMH>]> %d", responselen);
+    RLOGV("[OMH>]> %d", responselen);
 
     if (response == NULL && responselen != 0) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
-    RLOGD("[OMH>]> processing response");
+    RLOGV("[OMH>]> processing response");
 
     /* number of profile info's */
     num = *((int *) response);
@@ -4306,7 +4306,7 @@ RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response, size_t responsel
     }
 #endif
 #endif
-    RLOGD("RequestComplete, %s", rilSocketIdToString(socket_id));
+    RLOGV("RequestComplete, %s", rilSocketIdToString(socket_id));
 
     if (pRI->local > 0) {
         // Locally issued command...void only!
@@ -4592,7 +4592,7 @@ void RIL_onUnsolicitedResponse(int unsolResponse, void *data,
         break;
     }
 
-    RLOGI("%s UNSOLICITED: %s length:%d", rilSocketIdToString(soc_id), requestToString(unsolResponse), p.dataSize());
+    RLOGV("%s UNSOLICITED: %s length:%d", rilSocketIdToString(soc_id), requestToString(unsolResponse), p.dataSize());
     ret = sendResponse(p, soc_id);
     if (ret != 0 && unsolResponse == RIL_UNSOL_NITZ_TIME_RECEIVED) {
 
