@@ -139,3 +139,4 @@
     {RIL_REQUEST_SIM_TRANSMIT_CHANNEL, dispatchSIM_IO, responseSIM_IO},
     {RIL_REQUEST_SIM_GET_ATR, dispatchInts, responseString},
     {RIL_REQUEST_ON_DEMAND_PS_ATTACH, dispatchInts, responseVoid},
+    {RIL_REQUEST_SIM_AUTHENTICATION, dispatchString, responseString},
