@@ -219,6 +219,7 @@ static void dispatchGsmBrSmsCnf(Parcel &p, RequestInfo *pRI);
 static void dispatchCdmaBrSmsCnf(Parcel &p, RequestInfo *pRI);
 static void dispatchRilCdmaSmsWriteArgs(Parcel &p, RequestInfo *pRI);
 static void dispatchUiccSubscripton(Parcel &p, RequestInfo *pRI);
+static void dispatchSimAuthentication(Parcel &p, RequestInfo *pRI);
 static int responseInts(Parcel &p, void *response, size_t responselen);
 static int responseStrings(Parcel &p, void *response, size_t responselen);
 static int responseString(Parcel &p, void *response, size_t responselen);
@@ -3474,6 +3475,46 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
     rilEventAddWakeup (&s_debug_event);
 #endif
 
+}
+
+static void dispatchSimAuthentication(Parcel &p, RequestInfo *pRI)
+{
+    RIL_SimAuthentication pf;
+    int32_t  t;
+    status_t status;
+
+    memset(&pf, 0, sizeof(pf));
+
+    status = p.readInt32(&t);
+    pf.authContext = (int) t;
+    pf.authData = strdupReadString(p);
+    pf.aid = strdupReadString(p);
+
+    startRequest;
+    appendPrintBuf("authContext=%s, authData=%s, aid=%s", pf.authContext, pf.authData, pf.aid);
+    closeRequest;
+    printRequest(pRI->token, pRI->pCI->requestNumber);
+
+    if (status != NO_ERROR) {
+        goto invalid;
+    }
+    s_callbacks.onRequest(pRI->pCI->requestNumber, &pf, sizeof(pf), pRI);
+#ifdef MEMSET_FREED
+    memsetString(pf.authData);
+    memsetString(pf.aid);
+#endif
+
+    free(pf.authData);
+    free(pf.aid);
+
+#ifdef MEMSET_FREED
+    memset(&pf, 0, sizeof(pf));
+#endif
+
+    return;
+invalid:
+    invalidCommandBlock(pRI);
+    return;
 }
 
 static int
