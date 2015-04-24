@@ -2020,6 +2020,66 @@ error:
     free(cmd);
 }
 
+static void  requestSIM_OpenChannel_WITH_P2(void *data, size_t datalen, RIL_Token t)
+{
+    ATResponse *p_response = NULL;
+    int err;
+    char *cmd = NULL;
+    const char**  strings = (const char**)data;;
+    char *line;
+    // TODO: dinamically allocate the buffer depending on response length
+    int response[257];
+    int response_length = 1;
+    asprintf(&cmd, "AT+CCHP=%s,%s", strings[0], strings[1]);
+    err = at_send_command_singleline(cmd, "+CCHP:", &p_response);
+
+    if (err < 0 || p_response->success == 0) {
+        if (!strcmp(p_response->finalResponse, "+CME ERROR: MEMORY FULL")) {
+            err = RIL_E_MISSING_RESOURCE;
+        }
+        else if (!strcmp(p_response->finalResponse, "+CME ERROR: NOT FOUND")) {
+            err = RIL_E_NO_SUCH_ELEMENT;
+        }
+        else {
+            err = RIL_E_GENERIC_FAILURE;
+        }
+        goto error;
+    }
+
+    line = p_response->p_intermediates->line;
+
+    err = at_tok_start(&line);
+    if (err < 0) goto error;
+
+    // Read channel number
+    err = at_tok_nextint(&line, &response[0]);
+    if (err < 0) goto error;
+
+    // Read select response (if available)
+    while (at_tok_hasmore(&line)) {
+        err = at_tok_nextint(&line, &response[response_length]);
+        if (err < 0) goto error;
+        response_length++;
+    }
+    // Check that length == 1 (select response not present) or > 3 (valid APDU as select response)
+    if (response_length != 1 && response_length < 3) {
+        err = RIL_E_GENERIC_FAILURE;
+        RLOGE("Invalid select response (length = %d)", response_length - 1);
+        goto error;
+    }
+
+    RIL_onRequestComplete(t, RIL_E_SUCCESS, &response, response_length * sizeof(int));
+    at_response_free(p_response);
+    free(cmd);
+
+    return;
+error:
+    RLOGE("strings error!");
+    RIL_onRequestComplete(t, err, NULL, 0);
+    at_response_free(p_response);
+    free(cmd);
+}
+
 static void  requestSIM_CloseChannel(void *data, size_t datalen, RIL_Token t)
 {
     ATResponse *p_response = NULL;
@@ -2724,6 +2784,10 @@ onRequest (int request, void *data, size_t datalen, RIL_Token t)
 
         case RIL_REQUEST_SIM_GET_ATR:
             requestSIM_GetAtr(t);
+            break;
+
+        case RIL_REQUEST_SIM_OPEN_CHANNEL_WITH_P2:
+            requestSIM_OpenChannel_WITH_P2(data, datalen, t);
             break;
 
         case RIL_REQUEST_SEND_USSD:

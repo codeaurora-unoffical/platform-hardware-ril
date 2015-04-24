@@ -4104,6 +4104,29 @@ typedef struct {
  */
 #define RIL_REQUEST_SIM_GET_ATR 130
 
+/**
+ * RIL_REQUEST_SIM_OPEN_CHANNEL
+ *
+ * Open a new logical channel and select the given application. This command
+ * reflects TS 27.007 "open logical channel" operation (+CCHO).
+ *
+ * "data" is const char * and set to AID value, See ETSI 102.221 and 101.220.
+ * "p2" is the p2 byte to set
+ *
+ * "response" is int *
+ * ((int *)data)[0] contains the session id of the logical channel.
+ * ((int *)data)[1] onwards may optionally contain the select response for the
+ *     open channel command with one byte per integer.
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  RADIO_NOT_AVAILABLE
+ *  GENERIC_FAILURE
+ *  MISSING_RESOURCE
+ *  NO_SUCH_ELEMENT
+ */
+#define RIL_REQUEST_SIM_OPEN_CHANNEL_WITH_P2 131
+
 /***********************************************************************/
 
 
