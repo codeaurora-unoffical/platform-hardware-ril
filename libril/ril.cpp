@@ -69,7 +69,7 @@ namespace android {
 #define PROPERTY_RIL_IMPL "gsm.version.ril-impl"
 
 // match with constant in RIL.java
-#define MAX_COMMAND_BYTES (8 * 1024)
+#define MAX_COMMAND_BYTES (8 * 0xFFFF)
 
 // Basically: memset buffers that the client library
 // shouldn't be using anymore in an attempt to find
