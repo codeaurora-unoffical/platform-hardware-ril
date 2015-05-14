@@ -88,7 +88,7 @@ namespace android {
 #define RIL_ERRNO_INVALID_RESPONSE -1
 
 // request, response, and unsolicited msg print macro
-#define PRINTBUF_SIZE 8096
+#define PRINTBUF_SIZE 8 * 0xFFFF
 
 // Enable RILC log
 #define RILC_LOG 0

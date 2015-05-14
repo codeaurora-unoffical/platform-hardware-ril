@@ -46,7 +46,7 @@
 static void *noopRemoveWarning( void *a ) { return a; }
 #define RIL_UNUSED_PARM(a) noopRemoveWarning((void *)&(a));
 
-#define MAX_AT_RESPONSE 0x1000
+#define MAX_AT_RESPONSE 8 * 0xFFFF
 
 /* pathname returned from RIL_REQUEST_SETUP_DATA_CALL / RIL_REQUEST_SETUP_DEFAULT_PDP */
 #define PPP_TTY_PATH "eth0"
