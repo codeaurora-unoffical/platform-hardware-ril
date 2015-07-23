@@ -4107,8 +4107,7 @@ typedef struct {
 /**
  * RIL_REQUEST_SIM_OPEN_CHANNEL
  *
- * Open a new logical channel and select the given application. This command
- * reflects TS 27.007 "open logical channel" operation (+CCHO).
+ * Open a new logical channel and select the given application.
  *
  * "data" is const char * and set to AID value, See ETSI 102.221 and 101.220.
  * "p2" is the p2 byte to set
