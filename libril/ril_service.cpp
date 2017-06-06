@@ -49,6 +49,15 @@ using android::sp;
 #define ATOI_NULL_HANDLED(x) (x ? atoi(x) : -1)
 #define ATOI_NULL_HANDLED_DEF(x, defaultVal) (x ? atoi(x) : defaultVal)
 
+#if defined(ANDROID_MULTI_SIM)
+#define CALL_ONREQUEST(a, b, c, d, e) \
+        s_vendorFunctions->onRequest((a), (b), (c), (d), ((RIL_SOCKET_ID)(e)))
+#define CALL_ONSTATEREQUEST(a) s_vendorFunctions->onStateRequest((RIL_SOCKET_ID)(a))
+#else
+#define CALL_ONREQUEST(a, b, c, d, e) s_vendorFunctions->onRequest((a), (b), (c), (d))
+#define CALL_ONSTATEREQUEST(a) s_vendorFunctions->onStateRequest()
+#endif
+
 RIL_RadioFunctions *s_vendorFunctions = NULL;
 static CommandInfo *s_commands;
 
@@ -472,7 +481,11 @@ void sendErrorResponse(RequestInfo *pRI, RIL_Errno err) {
  */
 bool copyHidlStringToRil(char **dest, const hidl_string &src, RequestInfo *pRI) {
     size_t len = src.size();
-    if (len == 0) {
+    if (len == 0 &&
+        (pRI->pCI->requestNumber != RIL_REQUEST_ENTER_SIM_PIN) &&
+        (pRI->pCI->requestNumber != RIL_REQUEST_ENTER_SIM_PUK) &&
+        (pRI->pCI->requestNumber != RIL_REQUEST_ENTER_SIM_PIN2) &&
+        (pRI->pCI->requestNumber != RIL_REQUEST_ENTER_SIM_PUK2)) {
         *dest = NULL;
         return true;
     }
@@ -500,7 +513,7 @@ bool dispatchVoid(int serial, int slotId, int request) {
     if (pRI == NULL) {
         return false;
     }
-    s_vendorFunctions->onRequest(request, NULL, 0, pRI);
+    CALL_ONREQUEST(request, NULL, 0, pRI, slotId);
     return true;
 }
 
@@ -515,7 +528,7 @@ bool dispatchString(int serial, int slotId, int request, const char * str) {
         return false;
     }
 
-    s_vendorFunctions->onRequest(request, pString, sizeof(char *), pRI);
+    CALL_ONREQUEST(request, pString, sizeof(char *), pRI, slotId);
 
     memsetAndFreeStrings(1, pString);
     return true;
@@ -549,7 +562,7 @@ bool dispatchStrings(int serial, int slotId, int request, int countStrings, ...)
     }
     va_end(ap);
 
-    s_vendorFunctions->onRequest(request, pStrings, countStrings * sizeof(char *), pRI);
+    CALL_ONREQUEST(request, pStrings, countStrings * sizeof(char *), pRI, slotId);
 
     if (pStrings != NULL) {
         for (int i = 0 ; i < countStrings ; i++) {
@@ -589,7 +602,7 @@ bool dispatchStrings(int serial, int slotId, int request, const hidl_vec<hidl_st
         }
     }
 
-    s_vendorFunctions->onRequest(request, pStrings, countStrings * sizeof(char *), pRI);
+    CALL_ONREQUEST(request, pStrings, countStrings * sizeof(char *), pRI, slotId);
 
     if (pStrings != NULL) {
         for (int i = 0 ; i < countStrings ; i++) {
@@ -624,7 +637,7 @@ bool dispatchInts(int serial, int slotId, int request, int countInts, ...) {
     }
     va_end(ap);
 
-    s_vendorFunctions->onRequest(request, pInts, countInts * sizeof(int), pRI);
+    CALL_ONREQUEST(request, pInts, countInts * sizeof(int), pRI, slotId);
 
     if (pInts != NULL) {
 #ifdef MEMSET_FREED
@@ -653,7 +666,7 @@ bool dispatchCallForwardStatus(int serial, int slotId, int request,
         return false;
     }
 
-    s_vendorFunctions->onRequest(request, &cf, sizeof(cf), pRI);
+    CALL_ONREQUEST(request, &cf, sizeof(cf), pRI, slotId);
 
     memsetAndFreeStrings(1, cf.number);
 
@@ -668,7 +681,7 @@ bool dispatchRaw(int serial, int slotId, int request, const hidl_vec<uint8_t>& r
 
     const uint8_t *uData = rawBytes.data();
 
-    s_vendorFunctions->onRequest(request, (void *) uData, rawBytes.size(), pRI);
+    CALL_ONREQUEST(request, (void *) uData, rawBytes.size(), pRI, slotId);
 
     return true;
 }
@@ -692,7 +705,7 @@ bool dispatchIccApdu(int serial, int slotId, int request, const SimApdu& message
         return false;
     }
 
-    s_vendorFunctions->onRequest(request, &apdu, sizeof(apdu), pRI);
+    CALL_ONREQUEST(request, &apdu, sizeof(apdu), pRI, slotId);
 
     memsetAndFreeStrings(1, apdu.data);
 
@@ -890,7 +903,7 @@ Return<void> RadioImpl::dial(int32_t serial, const Dial& dialInfo) {
         dial.uusInfo = &uusInfo;
     }
 
-    s_vendorFunctions->onRequest(RIL_REQUEST_DIAL, &dial, sizeOfDial, pRI);
+    CALL_ONREQUEST(RIL_REQUEST_DIAL, &dial, sizeOfDial, pRI, mSlotId);
 
     memsetAndFreeStrings(2, dial.address, uusInfo.uusData);
 
@@ -1135,7 +1148,7 @@ Return<void> RadioImpl::iccIOForApp(int32_t serial, const IccIo& iccIo) {
         return Void();
     }
 
-    s_vendorFunctions->onRequest(RIL_REQUEST_SIM_IO, &rilIccIo, sizeof(rilIccIo), pRI);
+    CALL_ONREQUEST(RIL_REQUEST_SIM_IO, &rilIccIo, sizeof(rilIccIo), pRI, mSlotId);
 
     memsetAndFreeStrings(4, rilIccIo.path, rilIccIo.data, rilIccIo.pin2, rilIccIo.aidPtr);
 
@@ -1268,7 +1281,7 @@ Return<void> RadioImpl::setBarringPassword(int32_t serial, const hidl_string& fa
     RLOGD("setBarringPassword: serial %d", serial);
 #endif
     dispatchStrings(serial, mSlotId, RIL_REQUEST_CHANGE_BARRING_PASSWORD,
-            2, oldPassword.c_str(), newPassword.c_str());
+            3, facility.c_str(), oldPassword.c_str(), newPassword.c_str());
     return Void();
 }
 
@@ -1402,7 +1415,7 @@ Return<void> RadioImpl::writeSmsToSim(int32_t serial, const SmsWriteArgs& smsWri
         return Void();
     }
 
-    s_vendorFunctions->onRequest(RIL_REQUEST_WRITE_SMS_TO_SIM, &args, sizeof(args), pRI);
+    CALL_ONREQUEST(RIL_REQUEST_WRITE_SMS_TO_SIM, &args, sizeof(args), pRI, mSlotId);
 
     memsetAndFreeStrings(2, args.smsc, args.pdu);
 
@@ -1621,7 +1634,7 @@ Return<void> RadioImpl::sendCdmaSms(int32_t serial, const CdmaSmsMessage& sms) {
     RIL_CDMA_SMS_Message rcsm = {};
     constructCdmaSms(rcsm, sms);
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &rcsm, sizeof(rcsm), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &rcsm, sizeof(rcsm), pRI, mSlotId);
     return Void();
 }
 
@@ -1639,7 +1652,7 @@ Return<void> RadioImpl::acknowledgeLastIncomingCdmaSms(int32_t serial, const Cdm
     rcsa.uErrorClass = (RIL_CDMA_SMS_ErrorClass) smsAck.errorClass;
     rcsa.uSMSCauseCode = smsAck.smsCauseCode;
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &rcsa, sizeof(rcsa), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &rcsa, sizeof(rcsa), pRI, mSlotId);
     return Void();
 }
 
@@ -1676,8 +1689,8 @@ Return<void> RadioImpl::setGsmBroadcastConfig(int32_t serial,
         gsmBci[i].selected = BOOL_TO_INT(configInfo[i].selected);
     }
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, gsmBciPtrs,
-            num * sizeof(RIL_GSM_BroadcastSmsConfigInfo *), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, gsmBciPtrs,
+            num * sizeof(RIL_GSM_BroadcastSmsConfigInfo *), pRI, mSlotId);
     return Void();
 }
 
@@ -1721,8 +1734,8 @@ Return<void> RadioImpl::setCdmaBroadcastConfig(int32_t serial,
         cdmaBci[i].selected = BOOL_TO_INT(configInfo[i].selected);
     }
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, cdmaBciPtrs,
-            num * sizeof(RIL_CDMA_BroadcastSmsConfigInfo *), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, cdmaBciPtrs,
+            num * sizeof(RIL_CDMA_BroadcastSmsConfigInfo *), pRI, mSlotId);
     return Void();
 }
 
@@ -1757,7 +1770,7 @@ Return<void> RadioImpl::writeSmsToRuim(int32_t serial, const CdmaSmsWriteArgs& c
     rcsw.status = (int) cdmaSms.status;
     constructCdmaSms(rcsw.message, cdmaSms.message);
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &rcsw, sizeof(rcsw), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &rcsw, sizeof(rcsw), pRI, mSlotId);
     return Void();
 }
 
@@ -1914,7 +1927,7 @@ Return<void> RadioImpl::setInitialAttachApn(int32_t serial, const DataProfileInf
             return Void();
         }
 
-        s_vendorFunctions->onRequest(RIL_REQUEST_SET_INITIAL_ATTACH_APN, &iaa, sizeof(iaa), pRI);
+        CALL_ONREQUEST(RIL_REQUEST_SET_INITIAL_ATTACH_APN, &iaa, sizeof(iaa), pRI, mSlotId);
 
         memsetAndFreeStrings(4, iaa.apn, iaa.protocol, iaa.username, iaa.password);
     } else {
@@ -1958,7 +1971,7 @@ Return<void> RadioImpl::setInitialAttachApn(int32_t serial, const DataProfileInf
             return Void();
         }
 
-        s_vendorFunctions->onRequest(RIL_REQUEST_SET_INITIAL_ATTACH_APN, &iaa, sizeof(iaa), pRI);
+        CALL_ONREQUEST(RIL_REQUEST_SET_INITIAL_ATTACH_APN, &iaa, sizeof(iaa), pRI, mSlotId);
 
         memsetAndFreeStrings(6, iaa.apn, iaa.protocol, iaa.roamingProtocol, iaa.username,
                 iaa.password, iaa.mvnoMatchData);
@@ -2017,8 +2030,8 @@ bool dispatchImsGsmSms(const ImsSmsMessage& message, RequestInfo *pRI) {
     }
 
     rism.message.gsmMessage = pStrings;
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &rism, sizeof(RIL_RadioTechnologyFamily) +
-            sizeof(uint8_t) + sizeof(int32_t) + dataLen, pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &rism, sizeof(RIL_RadioTechnologyFamily) +
+            sizeof(uint8_t) + sizeof(int32_t) + dataLen, pRI, pRI->socket_id);
 
     for (int i = 0 ; i < countStrings ; i++) {
         memsetAndFreeStrings(1, pStrings[i]);
@@ -2049,8 +2062,8 @@ bool dispatchImsCdmaSms(const ImsSmsMessage& message, RequestInfo *pRI) {
 
     constructCdmaSms(rcsm, message.cdmaMessage[0]);
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &rism, sizeof(RIL_RadioTechnologyFamily) +
-            sizeof(uint8_t) + sizeof(int32_t) + sizeof(rcsm), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &rism, sizeof(RIL_RadioTechnologyFamily) +
+            sizeof(uint8_t) + sizeof(int32_t) + sizeof(rcsm), pRI, pRI->socket_id);
 
     return true;
 }
@@ -2106,7 +2119,7 @@ Return<void> RadioImpl::iccOpenLogicalChannel(int32_t serial, const hidl_string&
             return Void();
         }
 
-        s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &params, sizeof(params), pRI);
+        CALL_ONREQUEST(pRI->pCI->requestNumber, &params, sizeof(params), pRI, mSlotId);
 
         memsetAndFreeStrings(1, params.aidPtr);
     }
@@ -2141,7 +2154,7 @@ Return<void> RadioImpl::nvReadItem(int32_t serial, NvItem itemId) {
     RIL_NV_ReadItem nvri = {};
     nvri.itemID = (RIL_NV_Item) itemId;
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &nvri, sizeof(nvri), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &nvri, sizeof(nvri), pRI, mSlotId);
     return Void();
 }
 
@@ -2162,7 +2175,7 @@ Return<void> RadioImpl::nvWriteItem(int32_t serial, const NvWriteItem& item) {
         return Void();
     }
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &nvwi, sizeof(nvwi), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &nvwi, sizeof(nvwi), pRI, mSlotId);
 
     memsetAndFreeStrings(1, nvwi.value);
     return Void();
@@ -2177,10 +2190,28 @@ Return<void> RadioImpl::nvWriteCdmaPrl(int32_t serial, const hidl_vec<uint8_t>& 
 }
 
 Return<void> RadioImpl::nvResetConfig(int32_t serial, ResetNvType resetType) {
+    int rilResetType = -1;
 #if VDBG
     RLOGD("nvResetConfig: serial %d", serial);
 #endif
-    dispatchInts(serial, mSlotId, RIL_REQUEST_NV_RESET_CONFIG, 1, (int) resetType);
+    /* Convert ResetNvType to RIL.h values
+     * RIL_REQUEST_NV_RESET_CONFIG
+     * 1 - reload all NV items
+     * 2 - erase NV reset (SCRTN)
+     * 3 - factory reset (RTN)
+     */
+    switch(resetType) {
+      case ResetNvType::RELOAD:
+        rilResetType = 1;
+        break;
+      case ResetNvType::ERASE:
+        rilResetType = 2;
+        break;
+      case ResetNvType::FACTORY_RESET:
+        rilResetType = 3;
+        break;
+    }
+    dispatchInts(serial, mSlotId, RIL_REQUEST_NV_RESET_CONFIG, 1, rilResetType);
     return Void();
 }
 
@@ -2201,7 +2232,7 @@ Return<void> RadioImpl::setUiccSubscription(int32_t serial, const SelectUiccSub&
     rilUiccSub.sub_type = (RIL_SubscriptionType) uiccSub.subType;
     rilUiccSub.act_status = (RIL_UiccSubActStatus) uiccSub.actStatus;
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &rilUiccSub, sizeof(rilUiccSub), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &rilUiccSub, sizeof(rilUiccSub), pRI, mSlotId);
     return Void();
 }
 
@@ -2245,7 +2276,7 @@ Return<void> RadioImpl::requestIccSimAuthentication(int32_t serial, int32_t auth
         return Void();
     }
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &pf, sizeof(pf), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &pf, sizeof(pf), pRI, mSlotId);
 
     memsetAndFreeStrings(2, pf.authData, pf.aid);
     return Void();
@@ -2356,8 +2387,8 @@ Return<void> RadioImpl::setDataProfile(int32_t serial, const hidl_vec<DataProfil
             dataProfiles[i].enabled = BOOL_TO_INT(profiles[i].enabled);
         }
 
-        s_vendorFunctions->onRequest(RIL_REQUEST_SET_DATA_PROFILE, dataProfilePtrs,
-                num * sizeof(RIL_DataProfileInfo *), pRI);
+        CALL_ONREQUEST(RIL_REQUEST_SET_DATA_PROFILE, dataProfilePtrs,
+                num * sizeof(RIL_DataProfileInfo *), pRI, mSlotId);
 
         freeSetDataProfileData(num, dataProfiles, dataProfilePtrs, 4,
                 &RIL_DataProfileInfo::apn, &RIL_DataProfileInfo::protocol,
@@ -2434,8 +2465,8 @@ Return<void> RadioImpl::setDataProfile(int32_t serial, const hidl_vec<DataProfil
             dataProfiles[i].mtu = profiles[i].mtu;
         }
 
-        s_vendorFunctions->onRequest(RIL_REQUEST_SET_DATA_PROFILE, dataProfilePtrs,
-                num * sizeof(RIL_DataProfileInfo_v15 *), pRI);
+        CALL_ONREQUEST(RIL_REQUEST_SET_DATA_PROFILE, dataProfilePtrs,
+                num * sizeof(RIL_DataProfileInfo_v15 *), pRI, mSlotId);
 
         freeSetDataProfileData(num, dataProfiles, dataProfilePtrs, 6,
                 &RIL_DataProfileInfo_v15::apn, &RIL_DataProfileInfo_v15::protocol,
@@ -2480,7 +2511,7 @@ Return<void> RadioImpl::setRadioCapability(int32_t serial, const RadioCapability
     rilRc.status = (int) rc.status;
     strncpy(rilRc.logicalModemUuid, rc.logicalModemUuid.c_str(), MAX_UUID_LENGTH);
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &rilRc, sizeof(rilRc), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &rilRc, sizeof(rilRc), pRI, mSlotId);
 
     return Void();
 }
@@ -2572,7 +2603,7 @@ Return<void> RadioImpl::setAllowedCarriers(int32_t serial, bool allAllowed,
         excludedCarriers[i].match_data = carriers.excludedCarriers[i].matchData.c_str();
     }
 
-    s_vendorFunctions->onRequest(pRI->pCI->requestNumber, &cr, sizeof(RIL_CarrierRestrictions), pRI);
+    CALL_ONREQUEST(pRI->pCI->requestNumber, &cr, sizeof(RIL_CarrierRestrictions), pRI, mSlotId);
 
 #ifdef MEMSET_FREED
     memset(allowedCarriers, 0, cr.len_allowed_carriers * sizeof(RIL_Carrier));
@@ -2799,6 +2830,7 @@ int radio::supplyIccPinForAppResponse(int slotId,
         int ret = responseIntOrEmpty(responseInfo, serial, responseType, e, response, responseLen);
         Return<void> retStatus = radioService[slotId]->mRadioResponse->
                 supplyIccPinForAppResponse(responseInfo, ret);
+        RLOGE("supplyIccPinForAppResponse: amit ret %d", ret);
         radioService[slotId]->checkReturnStatus(retStatus);
     } else {
         RLOGE("supplyIccPinForAppResponse: radioService[%d]->mRadioResponse == NULL",
@@ -6171,8 +6203,14 @@ int radio::getAllowedCarriersResponse(int slotId,
         populateResponseInfo(responseInfo, serial, responseType, e);
         CarrierRestrictions carrierInfo = {};
         bool allAllowed = true;
-        if (response == NULL || responseLen != sizeof(RIL_CarrierRestrictions)) {
-            RLOGE("getAllowedCarriersResponse Invalid response: NULL");
+        if (response == NULL) {
+#if VDBG
+            RLOGD("getAllowedCarriersResponse response is NULL: all allowed");
+#endif
+            carrierInfo.allowedCarriers.resize(0);
+            carrierInfo.excludedCarriers.resize(0);
+        } else if (responseLen != sizeof(RIL_CarrierRestrictions)) {
+            RLOGE("getAllowedCarriersResponse Invalid response");
             if (e == RIL_E_SUCCESS) responseInfo.error = RadioError::INVALID_RESPONSE;
         } else {
             RIL_CarrierRestrictions *pCr = (RIL_CarrierRestrictions *)response;
@@ -6350,7 +6388,8 @@ int radio::radioStateChangedInd(int slotId,
                                  int indicationType, int token, RIL_Errno e, void *response,
                                  size_t responseLen) {
     if (radioService[slotId] != NULL && radioService[slotId]->mRadioIndication != NULL) {
-        RadioState radioState = (RadioState) s_vendorFunctions->onStateRequest();
+        RadioState radioState =
+                (RadioState) CALL_ONSTATEREQUEST(slotId);
         RLOGD("radioStateChangedInd: radioState %d", radioState);
         Return<void> retStatus = radioService[slotId]->mRadioIndication->radioStateChanged(
                 convertIntToRadioIndicationType(indicationType), radioState);
