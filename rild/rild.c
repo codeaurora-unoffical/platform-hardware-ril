@@ -317,7 +317,11 @@ int main(int argc, char **argv) {
     }
 OpenLib:
 #endif
+
+// Only switch user to radio in Android, LE doesn't use radio user
+#ifdef ANDROID
     switchUser();
+#endif
 
     dlHandle = dlopen(rilLibPath, RTLD_NOW);
 

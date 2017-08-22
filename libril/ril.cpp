@@ -17,7 +17,9 @@
 
 #define LOG_TAG "RILC"
 
+#if !defined(RIL_FOR_MDM_LE)
 #include <hardware_legacy/power.h>
+#endif
 #include <telephony/ril.h>
 #include <telephony/ril_cdma_sms.h>
 #include <cutils/sockets.h>
@@ -29,7 +31,11 @@
 #include <binder/Parcel.h>
 #include <cutils/jstring.h>
 #include <sys/types.h>
+#ifdef ANDROID
 #include <sys/limits.h>
+#else
+#include <limits.h>
+#endif
 #include <sys/system_properties.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -47,6 +53,7 @@
 #include <netinet/in.h>
 #include <cutils/properties.h>
 #include <RilSapSocket.h>
+#include <signal.h>
 
 extern "C" void
 RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response, size_t responselen);
@@ -4505,8 +4512,8 @@ static void listenCallback (int fd, short flags, void *param) {
     struct passwd *pwd = NULL;
 
     if(NULL == sapSocket) {
-        assert (*p_info->fdCommand < 0);
-        assert (fd == *p_info->fdListen);
+        assert (p_info->fdCommand < 0);
+        assert (fd == p_info->fdListen);
         processName = PHONE_PROCESS;
     } else {
         assert (sapSocket->commandFd < 0);
@@ -4528,6 +4535,8 @@ static void listenCallback (int fd, short flags, void *param) {
         return;
     }
 
+// Don't check uid on LE, no radio user
+#ifdef ANDROID
     /* check the credential of the other side and only accept socket from
      * phone process
      */
@@ -4572,6 +4581,7 @@ static void listenCallback (int fd, short flags, void *param) {
 
         return;
     }
+#endif
 
     ret = fcntl(fdCommand, F_SETFL, O_NONBLOCK);
 
@@ -4929,8 +4939,14 @@ static void startListen(RIL_SOCKET_ID socket_id, SocketListenParam* socket_liste
 
     fdListen = android_get_control_socket(socket_name);
     if (fdListen < 0) {
-        RLOGE("Failed to get socket %s", socket_name);
-        exit(-1);
+        RLOGW("Failed to get socket %s, creating local socket", socket_name);
+        fdListen = socket_local_server(socket_name,
+                                       ANDROID_SOCKET_NAMESPACE_RESERVED,
+                                       SOCK_STREAM);
+        if (fdListen < 0) {
+            RLOGE("Failed to create socket %s", socket_name);
+            exit(-1);
+        }
     }
 
     ret = listen(fdListen, 4);
@@ -5087,8 +5103,14 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
 
     s_fdDebug = android_get_control_socket(rildebug);
     if (s_fdDebug < 0) {
-        RLOGE("Failed to get socket : %s errno:%d", rildebug, errno);
-        exit(-1);
+        RLOGW("Failed to get socket : %s errno:%d, creating local socket", rildebug, errno);
+        s_fdDebug = socket_local_server(rildebug,
+                                        ANDROID_SOCKET_NAMESPACE_RESERVED,
+                                        SOCK_STREAM);
+        if (s_fdDebug < 0) {
+            RLOGW("Failed to create socket : %s errno:%d", rildebug, errno);
+            exit(-1);
+        }
     }
 
     ret = listen(s_fdDebug, 4);
@@ -5329,6 +5351,7 @@ done:
 
 static void
 grabPartialWakeLock() {
+#if !defined(RIL_FOR_MDM_LE)
     if (s_callbacks.version >= 13) {
         int ret;
         ret = pthread_mutex_lock(&s_wakeLockCountMutex);
@@ -5351,10 +5374,12 @@ grabPartialWakeLock() {
     } else {
         acquire_wake_lock(PARTIAL_WAKE_LOCK, ANDROID_WAKE_LOCK_NAME);
     }
+#endif
 }
 
 static void
 releaseWakeLock() {
+#if !defined(RIL_FOR_MDM_LE)
     if (s_callbacks.version >= 13) {
         int ret;
         ret = pthread_mutex_lock(&s_wakeLockCountMutex);
@@ -5375,6 +5400,7 @@ releaseWakeLock() {
     } else {
         release_wake_lock(ANDROID_WAKE_LOCK_NAME);
     }
+#endif
 }
 
 /**
@@ -5382,6 +5408,7 @@ releaseWakeLock() {
  */
 static void
 wakeTimeoutCallback (void *param) {
+#if !defined(RIL_FOR_MDM_LE)
     // We're using "param != NULL" as a cancellation mechanism
     if (s_callbacks.version >= 13) {
         if (param == NULL) {
@@ -5398,6 +5425,7 @@ wakeTimeoutCallback (void *param) {
             releaseWakeLock();
         }
     }
+#endif
 }
 
 static int
