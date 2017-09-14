@@ -19,7 +19,11 @@
 #define RIL_SHLIB
 #include "telephony/ril.h"
 #include "RilSocket.h"
+#ifdef ANDROID
 #include <hardware/ril/librilutils/proto/sap-api.pb.h>
+#else
+#include <proto/sap-api.pb.h>
+#endif
 
 /**
  * RilSapSocket is a derived class, derived from the RilSocket abstract

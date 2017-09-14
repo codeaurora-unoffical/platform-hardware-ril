@@ -16,7 +16,11 @@
 
 #include "pb_decode.h"
 #include <pthread.h>
+#ifdef ANDROID
 #include <hardware/ril/librilutils/proto/sap-api.pb.h>
+#else
+#include <proto/sap-api.pb.h>
+#endif
 #include <utils/Log.h>
 
 using namespace std;
