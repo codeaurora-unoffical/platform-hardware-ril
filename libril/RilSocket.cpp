@@ -30,6 +30,12 @@ int RilSocket::socketInit(void) {
     commandCb = &RilSocket::sSocketRequestsHandler;
     listenFd = android_get_control_socket(name);
 
+    if (listenFd < 0) {
+        listenFd = socket_local_server(name,
+                                       ANDROID_SOCKET_NAMESPACE_RESERVED,
+                                       SOCK_STREAM);
+    }
+
     //Start listening
     ret = listen(listenFd, SOCKET_LISTEN_BACKLOG);
 

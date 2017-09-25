@@ -36,12 +36,21 @@
 #include <cutils/sockets.h>
 #include <termios.h>
 #include <sys/system_properties.h>
+#ifndef ANDROID
+#include <limits.h>
+#endif
 
 #include "ril.h"
 #include "hardware/qemu_pipe.h"
 
 #define LOG_TAG "RIL"
 #include <utils/Log.h>
+
+#ifndef ANDROID
+int __system_property_get(const char* key, char* value) {
+    return property_get(key, value);
+}
+#endif
 
 static void *noopRemoveWarning( void *a ) { return a; }
 #define RIL_UNUSED_PARM(a) noopRemoveWarning((void *)&(a));

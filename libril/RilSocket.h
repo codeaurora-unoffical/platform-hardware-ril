@@ -34,7 +34,7 @@ extern "C" void *ril_socket_process_requests_loop(void *arg);
  * </ul>
  */
 class RilSocket {
-    protected:
+    public:
 
         /**
          * Socket name.
