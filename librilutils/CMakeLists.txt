@@ -16,9 +16,12 @@ set_source_files_properties(${PROTO_SRCS} ${PROTO_HDRS} PROPERTIES GENERATED TRU
 set(SOURCE_FILES ${PROTO_SRCS} ${PROTO_HDRS} librilutils.c record_stream.c)
 
 add_library (${TARGET_NAME} SHARED ${SOURCE_FILES})
+set_target_properties(${TARGET_NAME} PROPERTIES
+                      VERSION 1.0.0
+                      SOVERSION 1)
 
 install ( TARGETS ${TARGET_NAME}
-          RUNTIME DESTINATION bin
-          ARCHIVE DESTINATION bin
-          LIBRARY DESTINATION lib )
+          RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+          ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
