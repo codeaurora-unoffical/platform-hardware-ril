@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 2.8.9)
 
 project (ril)
 
+include(GNUInstallDirs)
+include(FindPkgConfig)
+
+pkg_check_modules(GLIB REQUIRED glib-2.0)
+add_compile_options(${GLIB_CFLAGS} -include glib.h)
+add_definitions(-Dstrlcpy=g_strlcpy)
+add_definitions(-Dstrlcat=g_strlcat)
+
 # Supported configurations
 set(CMAKE_CONFIGURATION_TYPES
     "Debug"
@@ -18,6 +26,6 @@ add_subdirectory( libril )
 # <--------------------------------------------->
 # adding header file install
 # <--------------------------------------------->
-install( DIRECTORY include/libril DESTINATION include )
-install( DIRECTORY include/telephony DESTINATION include )
+install( DIRECTORY include/libril DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
+install( DIRECTORY include/telephony DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
 
