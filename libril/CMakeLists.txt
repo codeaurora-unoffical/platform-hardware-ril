@@ -17,13 +17,19 @@ SYSR_INCLUDE_DIR(hardware/ril/librilutils)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 ## begin the tooling support for strlcpy() and strlcat()
+
+# make CMAKE_INSTALL_LIBDIR as absoulte path on 64bit builds
+if (${CMAKE_INSTALL_LIBDIR} MATCHES "lib64")
+    set(CMAKE_INSTALL_LIBDIR "/usr/lib64")
+endif (${CMAKE_INSTALL_LIBDIR} MATCHES "lib64")
+
     SYSR_INCLUDE_DIR(glib-2.0/include)
     SYSR_INCLUDE_DIR(glib-2.0)
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I =/usr/lib/glib-2.0/include")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I =${CMAKE_INSTALL_LIBDIR}/glib-2.0/include")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -include glib.h")
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I =/usr/lib/glib-2.0/include")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I =${CMAKE_INSTALL_LIBDIR}/glib-2.0/include")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include glib.h")
 
     add_definitions( -Dstrlcpy=g_strlcpy )
@@ -40,5 +46,5 @@ set_target_properties(${TARGET_NAME} PROPERTIES LINK_FLAGS
 install ( TARGETS ${TARGET_NAME}
           RUNTIME DESTINATION bin
           ARCHIVE DESTINATION bin
-          LIBRARY DESTINATION lib )
+          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
