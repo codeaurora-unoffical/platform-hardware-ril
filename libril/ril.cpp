@@ -3326,7 +3326,7 @@ static void responseRilSignalStrengthV10(Parcel &p, RIL_SignalStrength_v10 *p_cu
 
 static int responseRilSignalStrength(Parcel &p,
                     void *response, size_t responselen) {
-    if (response == NULL && responselen != 0) {
+    if (response == NULL) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -3433,7 +3433,7 @@ static int responseCdmaSignalInfoRecord(Parcel &p, void *response, size_t respon
 
 static int responseCdmaCallWaiting(Parcel &p, void *response,
             size_t responselen) {
-    if (response == NULL && responselen != 0) {
+    if (response == NULL) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -3504,7 +3504,7 @@ static void responseSimRefreshV7(Parcel &p, void *response) {
 }
 
 static int responseSimRefresh(Parcel &p, void *response, size_t responselen) {
-    if (response == NULL && responselen != 0) {
+    if (response == NULL) {
         RLOGE("responseSimRefresh: invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -3983,7 +3983,7 @@ static void responseSimStatusV6(Parcel &p, void *response) {
 static int responseSimStatus(Parcel &p, void *response, size_t responselen) {
     int i;
 
-    if (response == NULL && responselen != 0) {
+    if (response == NULL) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
