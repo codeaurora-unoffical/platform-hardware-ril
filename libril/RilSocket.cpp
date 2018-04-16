@@ -53,6 +53,9 @@ int RilSocket::socketInit(void) {
 void RilSocket::sSocketListener(int fd, short flags, void *param) {
     RilSocket *theSocket = (RilSocket *) param;
     MySocketListenParam listenParam;
+
+    memset(&listenParam, 0, sizeof(listenParam));
+
     listenParam.socket = theSocket;
     listenParam.sListenParam.type = RIL_SAP_SOCKET;
 
