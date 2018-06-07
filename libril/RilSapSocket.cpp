@@ -218,11 +218,7 @@ void* RilSapSocket::processRequestsLoop(void) {
 RilSapSocket::RilSapSocket(const char *socketName,
         RIL_SOCKET_ID socketId,
         RIL_RadioFunctions *inputUimFuncs):
-        RilSocket(socketName, socketId) {
-    if (inputUimFuncs) {
-        uimFuncs = inputUimFuncs;
-    }
-}
+        RilSocket(socketName, socketId), uimFuncs{inputUimFuncs}, UimInit{nullptr} {}
 
 #define BYTES_PER_LINE 16
 

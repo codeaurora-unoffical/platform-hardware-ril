@@ -2518,7 +2518,7 @@ responseInts(Parcel &p, void *response, size_t responselen) {
 // Currently, only Shamu plans to use RIL_LastCallFailCauseInfo.
 // TODO(yjl): Let all implementations use RIL_LastCallFailCauseInfo.
 static int responseFailCause(Parcel &p, void *response, size_t responselen) {
-    if (response == NULL && responselen != 0) {
+    if (NULL == response) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -2849,8 +2849,8 @@ static int responseDataCallListV9(Parcel &p, void *response, size_t responselen)
 
 static int responseDataCallListV11(Parcel &p, void *response, size_t responselen) {
     if (response == NULL && responselen != 0) {
-                RLOGE("invalid response: NULL");
-                return RIL_ERRNO_INVALID_RESPONSE;
+        RLOGE("invalid response: NULL");
+        return RIL_ERRNO_INVALID_RESPONSE;
     }
 
     if (responselen % sizeof(RIL_Data_Call_Response_v11) != 0) {
@@ -3358,6 +3358,11 @@ static int responseRilSignalStrength(Parcel &p,
             return RIL_ERRNO_INVALID_RESPONSE;
         }
     } else { // RIL version >= 13
+        if (NULL == response) {
+            RLOGE("invalid response: NULL");
+            return RIL_ERRNO_INVALID_RESPONSE;
+        }
+
         if (responselen % sizeof(RIL_SignalStrength_v10) != 0) {
             RLOGE("Data structure expected is RIL_SignalStrength_v10");
             if (!isDebuggable()) {
@@ -3403,7 +3408,7 @@ static int responseCallRing(Parcel &p, void *response, size_t responselen) {
 }
 
 static int responseCdmaSignalInfoRecord(Parcel &p, void *response, size_t responselen) {
-    if (response == NULL || responselen == 0) {
+    if (response == NULL) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -3433,8 +3438,8 @@ static int responseCdmaSignalInfoRecord(Parcel &p, void *response, size_t respon
 
 static int responseCdmaCallWaiting(Parcel &p, void *response,
             size_t responselen) {
-    if (response == NULL && responselen != 0) {
-        RLOGE("invalid response: NULL");
+    if (NULL == response) {
+        RLOGE("responseCdmaCallWaiting: invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
@@ -3504,7 +3509,7 @@ static void responseSimRefreshV7(Parcel &p, void *response) {
 }
 
 static int responseSimRefresh(Parcel &p, void *response, size_t responselen) {
-    if (response == NULL && responselen != 0) {
+    if (NULL == response) {
         RLOGE("responseSimRefresh: invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -3841,7 +3846,7 @@ static int responseSSData(Parcel &p, void *response, size_t responselen) {
 
     if (response == NULL && responselen != 0) {
         RLOGE("invalid response length was %d expected %d",
-                (int)responselen, (int)sizeof (RIL_SIM_IO_Response));
+              (int)responselen, (int)sizeof (RIL_SIM_IO_Response));
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
@@ -3983,7 +3988,7 @@ static void responseSimStatusV6(Parcel &p, void *response) {
 static int responseSimStatus(Parcel &p, void *response, size_t responselen) {
     int i;
 
-    if (response == NULL && responselen != 0) {
+    if (NULL == response) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }
@@ -4325,7 +4330,7 @@ static void sendAdnRecordInfo(Parcel &p, int num_records, RIL_AdnRecordInfo reco
 static int responseAdnRecords(Parcel &p, void *response, size_t responselen) {
     int i;
 
-    if (response == NULL && responselen != 0) {
+    if (NULL == response) {
         RLOGE("invalid response: NULL");
         return RIL_ERRNO_INVALID_RESPONSE;
     }

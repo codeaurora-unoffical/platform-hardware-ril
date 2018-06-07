@@ -204,6 +204,8 @@ int main(int argc, char **argv) {
         static char   arg_device[32];
         int           done = 0;
 
+	arg_overrides[0] = argv[0];
+
 #define  REFERENCE_RIL_PATH  "libreference-ril.so"
 
         /* first, read /proc/cmdline into memory */
