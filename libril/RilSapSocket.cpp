@@ -23,9 +23,10 @@
 #include "pb_encode.h"
 #undef LOG_TAG
 #define LOG_TAG "RIL_UIM_SOCKET"
-#include <utils/Log.h>
+#include <utils/Log2.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <cstdio>
 
 static RilSapSocket::RilSapSocketList *head = NULL;
 

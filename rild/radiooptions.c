@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <cutils/sockets.h>
+#include <cutils/sockets2.h>
 
 #define SOCKET_NAME_RIL_DEBUG	"rild-debug"	/* from ril.cpp */
 #define SOCKET_NAME_RIL2_DEBUG	"rild2-debug"
@@ -109,9 +109,7 @@ int main(int argc, char *argv[])
         strncpy(socket_name, SOCKET_NAME_RIL2_DEBUG, 19);
     }
     
-    fd = socket_local_client(socket_name,
-                                 ANDROID_SOCKET_NAMESPACE_RESERVED,
-                                 SOCK_STREAM);
+    fd = socket_local_client(socket_name, SOCK_STREAM);
     if (fd < 0) {
         perror ("opening radio debug socket");
         exit(-1);

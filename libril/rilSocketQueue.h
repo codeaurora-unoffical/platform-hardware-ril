@@ -21,7 +21,7 @@
 #else
 #include <proto/sap-api.pb.h>
 #endif
-#include <utils/Log.h>
+#include <utils/Log2.h>
 
 using namespace std;
 

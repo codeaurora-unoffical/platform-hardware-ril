@@ -31,7 +31,7 @@
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "AT"
-#include <utils/Log.h>
+#include <utils/Log2.h>
 
 #include "misc.h"
 

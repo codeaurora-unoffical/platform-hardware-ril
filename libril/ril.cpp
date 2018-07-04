@@ -22,21 +22,22 @@
 #endif
 #include <telephony/ril.h>
 #include <telephony/ril_cdma_sms.h>
-#include <cutils/sockets.h>
+#ifndef RIL_FOR_MDM_LE
 #include <cutils/jstring.h>
-#include <telephony/record_stream.h>
-#include <utils/Log.h>
 #include <utils/SystemClock.h>
+#include <sys/system_properties.h>
+#endif
+#include <binder/Parcel2.h>
+#include <utils/Log2.h>
+#include <utils/Errors2.h>
+#include <telephony/record_stream.h>
 #include <pthread.h>
-#include <binder/Parcel.h>
-#include <cutils/jstring.h>
 #include <sys/types.h>
 #ifdef ANDROID
 #include <sys/limits.h>
 #else
 #include <limits.h>
 #endif
-#include <sys/system_properties.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,9 +52,19 @@
 #include <sys/un.h>
 #include <assert.h>
 #include <netinet/in.h>
-#include <cutils/properties.h>
-#include <RilSapSocket.h>
+#include <ril_event.h>
+#include <libril/ril_ex.h>
 #include <signal.h>
+#include <string.h>
+#include <string>
+#include <locale>
+#include <codecvt>
+#include <RilSocket.h>
+
+extern "C" {
+#include <cutils/properties2.h>
+#include <cutils/sockets2.h>
+}
 
 extern "C" void
 RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response, size_t responselen);
@@ -402,15 +413,33 @@ void RIL_setRilSocketName(const char * s) {
 }
 
 static char *
+strndup16to8(const char16_t *s16) {
+    if (s16 == NULL) {
+        return NULL;
+    }
+
+    std::u16string source = s16;
+    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,char16_t> convert;
+    std::string dest = convert.to_bytes(source);
+    int destLen = dest.length();
+    char * cstr = (char *) malloc(sizeof(char) * (destLen + 1));
+    strncpy(cstr, dest.c_str(), destLen);
+    cstr[destLen] = '\0';
+
+    return cstr;
+}
+
+static char *
 strdupReadString(Parcel &p) {
     size_t stringlen;
     const char16_t *s16;
 
     s16 = p.readString16Inplace(&stringlen);
 
-    return strndup16to8(s16, stringlen);
+    return strndup16to8(s16);
 }
 
+#ifndef RIL_FOR_MDM_LE
 static status_t
 readStringFromParcelInplace(Parcel &p, char *str, size_t maxLen) {
     size_t s16Len;
@@ -430,15 +459,7 @@ readStringFromParcelInplace(Parcel &p, char *str, size_t maxLen) {
         return NO_ERROR;
     }
 }
-
-static void writeStringToParcel(Parcel &p, const char *s) {
-    char16_t *s16;
-    size_t s16_len;
-    s16 = strdup8to16(s, &s16_len);
-    p.writeString16(s16, s16_len);
-    free(s16);
-}
-
+#endif
 
 static void
 memsetString (char *s) {
@@ -2118,7 +2139,9 @@ static void dispatchRadioCapability(Parcel &p, RequestInfo *pRI){
         goto invalid;
     }
 
+#ifndef RIL_FOR_MDM_LE
     status = readStringFromParcelInplace(p, rc.logicalModemUuid, sizeof(rc.logicalModemUuid));
+#endif
     if (status != NO_ERROR) {
         goto invalid;
     }
@@ -2536,7 +2559,7 @@ static int responseFailCause(Parcel &p, void *response, size_t responselen) {
       appendPrintBuf("%s[cause_code=%d,vendor_cause=%s]", printBuf, p_fail_cause_info->cause_code,
                      p_fail_cause_info->vendor_cause);
       p.writeInt32(p_fail_cause_info->cause_code);
-      writeStringToParcel(p, p_fail_cause_info->vendor_cause);
+      p.writeString8AsString16(p_fail_cause_info->vendor_cause);
       removeLastChar;
       closeResponse;
     } else {
@@ -2581,7 +2604,7 @@ static int responseStrings(Parcel &p, void *response, size_t responselen) {
         startResponse;
         for (int i = 0 ; i < numStrings ; i++) {
             appendPrintBuf("%s%s,", printBuf, (char*)p_cur[i]);
-            writeStringToParcel (p, p_cur[i]);
+            p.writeString8AsString16(p_cur[i]);
         }
         removeLastChar;
         closeResponse;
@@ -2600,7 +2623,7 @@ static int responseString(Parcel &p, void *response, size_t responselen) {
     appendPrintBuf("%s%s", printBuf, (char*)response);
     closeResponse;
 
-    writeStringToParcel(p, (const char *)response);
+    p.writeString8AsString16((const char *)response);
 
     return 0;
 }
@@ -2632,6 +2655,7 @@ static int responseCallList(Parcel &p, void *response, size_t responselen) {
 
     for (int i = 0 ; i < num ; i++) {
         RIL_Call *p_cur = ((RIL_Call **) response)[i];
+
         /* each call info */
         p.writeInt32(p_cur->state);
         p.writeInt32(p_cur->index);
@@ -2641,9 +2665,9 @@ static int responseCallList(Parcel &p, void *response, size_t responselen) {
         p.writeInt32(p_cur->als);
         p.writeInt32(p_cur->isVoice);
         p.writeInt32(p_cur->isVoicePrivacy);
-        writeStringToParcel(p, p_cur->number);
+        p.writeString8AsString16(p_cur->number);
         p.writeInt32(p_cur->numberPresentation);
-        writeStringToParcel(p, p_cur->name);
+        p.writeString8AsString16(p_cur->name);
         p.writeInt32(p_cur->namePresentation);
         // Remove when partners upgrade to version 3
         if ((s_callbacks.version < 3) || (p_cur->uusInfo == NULL || p_cur->uusInfo->uusData == NULL)) {
@@ -2696,7 +2720,7 @@ static int responseSMS(Parcel &p, void *response, size_t responselen) {
     RIL_SMS_Response *p_cur = (RIL_SMS_Response *) response;
 
     p.writeInt32(p_cur->messageRef);
-    writeStringToParcel(p, p_cur->ackPDU);
+    p.writeString8AsString16(p_cur->ackPDU);
     p.writeInt32(p_cur->errorCode);
 
     startResponse;
@@ -2732,9 +2756,9 @@ static int responseDataCallListV4(Parcel &p, void *response, size_t responselen)
     for (i = 0; i < num; i++) {
         p.writeInt32(p_cur[i].cid);
         p.writeInt32(p_cur[i].active);
-        writeStringToParcel(p, p_cur[i].type);
+        p.writeString8AsString16(p_cur[i].type);
         // apn is not used, so don't send.
-        writeStringToParcel(p, p_cur[i].address);
+        p.writeString8AsString16(p_cur[i].address);
         appendPrintBuf("%s[cid=%d,%s,%s,%s],", printBuf,
             p_cur[i].cid,
             (p_cur[i].active==0)?"down":"up",
@@ -2774,11 +2798,11 @@ static int responseDataCallListV6(Parcel &p, void *response, size_t responselen)
         p.writeInt32(p_cur[i].suggestedRetryTime);
         p.writeInt32(p_cur[i].cid);
         p.writeInt32(p_cur[i].active);
-        writeStringToParcel(p, p_cur[i].type);
-        writeStringToParcel(p, p_cur[i].ifname);
-        writeStringToParcel(p, p_cur[i].addresses);
-        writeStringToParcel(p, p_cur[i].dnses);
-        writeStringToParcel(p, p_cur[i].gateways);
+        p.writeString8AsString16(p_cur[i].type);
+        p.writeString8AsString16(p_cur[i].ifname);
+        p.writeString8AsString16(p_cur[i].addresses);
+        p.writeString8AsString16(p_cur[i].dnses);
+        p.writeString8AsString16(p_cur[i].gateways);
         appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s],", printBuf,
             p_cur[i].status,
             p_cur[i].suggestedRetryTime,
@@ -2823,12 +2847,12 @@ static int responseDataCallListV9(Parcel &p, void *response, size_t responselen)
         p.writeInt32(p_cur[i].suggestedRetryTime);
         p.writeInt32(p_cur[i].cid);
         p.writeInt32(p_cur[i].active);
-        writeStringToParcel(p, p_cur[i].type);
-        writeStringToParcel(p, p_cur[i].ifname);
-        writeStringToParcel(p, p_cur[i].addresses);
-        writeStringToParcel(p, p_cur[i].dnses);
-        writeStringToParcel(p, p_cur[i].gateways);
-        writeStringToParcel(p, p_cur[i].pcscf);
+        p.writeString8AsString16(p_cur[i].type);
+        p.writeString8AsString16(p_cur[i].ifname);
+        p.writeString8AsString16(p_cur[i].addresses);
+        p.writeString8AsString16(p_cur[i].dnses);
+        p.writeString8AsString16(p_cur[i].gateways);
+        p.writeString8AsString16(p_cur[i].pcscf);
         appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s,%s],", printBuf,
             p_cur[i].status,
             p_cur[i].suggestedRetryTime,
@@ -2873,12 +2897,12 @@ static int responseDataCallListV11(Parcel &p, void *response, size_t responselen
         p.writeInt32(p_cur[i].suggestedRetryTime);
         p.writeInt32(p_cur[i].cid);
         p.writeInt32(p_cur[i].active);
-        writeStringToParcel(p, p_cur[i].type);
-        writeStringToParcel(p, p_cur[i].ifname);
-        writeStringToParcel(p, p_cur[i].addresses);
-        writeStringToParcel(p, p_cur[i].dnses);
-        writeStringToParcel(p, p_cur[i].gateways);
-        writeStringToParcel(p, p_cur[i].pcscf);
+        p.writeString8AsString16(p_cur[i].type);
+        p.writeString8AsString16(p_cur[i].ifname);
+        p.writeString8AsString16(p_cur[i].addresses);
+        p.writeString8AsString16(p_cur[i].dnses);
+        p.writeString8AsString16(p_cur[i].gateways);
+        p.writeString8AsString16(p_cur[i].pcscf);
         p.writeInt32(p_cur[i].mtu);
         appendPrintBuf("%s[status=%d,retry=%d,cid=%d,%s,%s,%s,%s,%s,%s,%s,mtu=%d],", printBuf,
         p_cur[i].status,
@@ -2967,7 +2991,7 @@ static int responseSIM_IO(Parcel &p, void *response, size_t responselen) {
     RIL_SIM_IO_Response *p_cur = (RIL_SIM_IO_Response *) response;
     p.writeInt32(p_cur->sw1);
     p.writeInt32(p_cur->sw2);
-    writeStringToParcel(p, p_cur->simResponse);
+    p.writeString8AsString16(p_cur->simResponse);
 
     startResponse;
     appendPrintBuf("%ssw1=0x%X,sw2=0x%X,%s", printBuf, p_cur->sw1, p_cur->sw2,
@@ -3004,7 +3028,7 @@ static int responseCallForwards(Parcel &p, void *response, size_t responselen) {
         p.writeInt32(p_cur->reason);
         p.writeInt32(p_cur->serviceClass);
         p.writeInt32(p_cur->toa);
-        writeStringToParcel(p, p_cur->number);
+        p.writeString8AsString16(p_cur->number);
         p.writeInt32(p_cur->timeSeconds);
         appendPrintBuf("%s[%s,reason=%d,cls=%d,toa=%d,%s,tout=%d],", printBuf,
             (p_cur->status==1)?"enable":"disable",
@@ -3035,7 +3059,7 @@ static int responseSsn(Parcel &p, void *response, size_t responselen) {
     p.writeInt32(p_cur->code);
     p.writeInt32(p_cur->index);
     p.writeInt32(p_cur->type);
-    writeStringToParcel(p, p_cur->number);
+    p.writeString8AsString16(p_cur->number);
 
     startResponse;
     appendPrintBuf("%s%s,code=%d,id=%d,type=%d,%s", printBuf,
@@ -3070,7 +3094,7 @@ static int responseCellList(Parcel &p, void *response, size_t responselen) {
         RIL_NeighboringCell *p_cur = ((RIL_NeighboringCell **) response)[i];
 
         p.writeInt32(p_cur->rssi);
-        writeStringToParcel (p, p_cur->cid);
+        p.writeString8AsString16(p_cur->cid);
 
         appendPrintBuf("%s[cid=%s,rssi=%d],", printBuf,
             p_cur->cid, p_cur->rssi);
@@ -3154,7 +3178,7 @@ static int responseCdmaInformationRecords(Parcel &p,
                     string8[i] = infoRec->rec.display.alpha_buf[i];
                 }
                 string8[(int)infoRec->rec.display.alpha_len] = '\0';
-                writeStringToParcel(p, (const char*)string8);
+                p.writeString8AsString16((const char*)string8);
                 free(string8);
                 string8 = NULL;
                 break;
@@ -3178,7 +3202,7 @@ static int responseCdmaInformationRecords(Parcel &p,
                     string8[i] = infoRec->rec.number.buf[i];
                 }
                 string8[(int)infoRec->rec.number.len] = '\0';
-                writeStringToParcel(p, (const char*)string8);
+                p.writeString8AsString16((const char*)string8);
                 free(string8);
                 string8 = NULL;
                 p.writeInt32(infoRec->rec.number.number_type);
@@ -3222,7 +3246,7 @@ static int responseCdmaInformationRecords(Parcel &p,
                     string8[i] = infoRec->rec.redir.redirectingNumber.buf[i];
                 }
                 string8[(int)infoRec->rec.redir.redirectingNumber.len] = '\0';
-                writeStringToParcel(p, (const char*)string8);
+                p.writeString8AsString16((const char*)string8);
                 free(string8);
                 string8 = NULL;
                 p.writeInt32(infoRec->rec.redir.redirectingNumber.number_type);
@@ -3444,9 +3468,9 @@ static int responseCdmaCallWaiting(Parcel &p, void *response,
 
     RIL_CDMA_CallWaiting_v6 *p_cur = ((RIL_CDMA_CallWaiting_v6 *) response);
 
-    writeStringToParcel(p, p_cur->number);
+    p.writeString8AsString16(p_cur->number);
     p.writeInt32(p_cur->numberPresentation);
-    writeStringToParcel(p, p_cur->name);
+    p.writeString8AsString16(p_cur->name);
     marshallSignalInfoRecord(p, p_cur->signalInfoRecord);
 
     if (s_callbacks.version <= LAST_IMPRECISE_RIL_VERSION) {
@@ -3493,7 +3517,7 @@ static void responseSimRefreshV7(Parcel &p, void *response) {
       RIL_SimRefreshResponse_v7 *p_cur = ((RIL_SimRefreshResponse_v7 *) response);
       p.writeInt32(p_cur->result);
       p.writeInt32(p_cur->ef_id);
-      writeStringToParcel(p, p_cur->aid);
+      p.writeString8AsString16(p_cur->aid);
 
       appendPrintBuf("%sresult=%d, ef_id=%d, aid=%s",
             printBuf,
@@ -3517,7 +3541,7 @@ static int responseSimRefresh(Parcel &p, void *response, size_t responselen) {
             int *p_cur = ((int *) response);
             p.writeInt32(p_cur[0]);
             p.writeInt32(p_cur[1]);
-            writeStringToParcel(p, NULL);
+            p.writeString8AsString16(NULL);
 
             appendPrintBuf("%sresult=%d, ef_id=%d",
                     printBuf,
@@ -3773,7 +3797,7 @@ static int responseHardwareConfig(Parcel &p, void *response, size_t responselen)
    for (i = 0; i < num; i++) {
       switch (p_cur[i].type) {
          case RIL_HARDWARE_CONFIG_MODEM: {
-            writeStringToParcel(p, p_cur[i].uuid);
+            p.writeString8AsString16(p_cur[i].uuid);
             p.writeInt32((int)p_cur[i].state);
             p.writeInt32(p_cur[i].cfg.modem.rat);
             p.writeInt32(p_cur[i].cfg.modem.maxVoice);
@@ -3786,9 +3810,9 @@ static int responseHardwareConfig(Parcel &p, void *response, size_t responselen)
             break;
          }
          case RIL_HARDWARE_CONFIG_SIM: {
-            writeStringToParcel(p, p_cur[i].uuid);
+            p.writeString8AsString16(p_cur[i].uuid);
             p.writeInt32((int)p_cur[i].state);
-            writeStringToParcel(p, p_cur[i].cfg.sim.modemUuid);
+            p.writeString8AsString16(p_cur[i].cfg.sim.modemUuid);
 
             appendPrintBuf("%s sim: uuid=%s,state=%d,modem-uuid=%s", printBuf,
                p_cur[i].uuid, (int)p_cur[i].state, p_cur[i].cfg.sim.modemUuid);
@@ -3818,7 +3842,7 @@ static int responseRadioCapability(Parcel &p, void *response, size_t responselen
     p.writeInt32(p_cur->session);
     p.writeInt32(p_cur->phase);
     p.writeInt32(p_cur->rat);
-    writeStringToParcel(p, p_cur->logicalModemUuid);
+    p.writeString8AsString16(p_cur->logicalModemUuid);
     p.writeInt32(p_cur->status);
 
     startResponse;
@@ -3876,7 +3900,7 @@ static int responseSSData(Parcel &p, void *response, size_t responselen) {
              p.writeInt32(cf.reason);
              p.writeInt32(cf.serviceClass);
              p.writeInt32(cf.toa);
-             writeStringToParcel(p, cf.number);
+             p.writeString8AsString16(cf.number);
              p.writeInt32(cf.timeSeconds);
              appendPrintBuf("%s[%s,reason=%d,cls=%d,toa=%d,%s,tout=%d],", printBuf,
                  (cf.status==1)?"enable":"disable", cf.reason, cf.serviceClass, cf.toa,
@@ -3936,8 +3960,8 @@ static void sendSimStatusAppInfo(Parcel &p, int num_apps, RIL_AppStatus appStatu
             p.writeInt32(appStatus[i].app_type);
             p.writeInt32(appStatus[i].app_state);
             p.writeInt32(appStatus[i].perso_substate);
-            writeStringToParcel(p, (const char*)(appStatus[i].aid_ptr));
-            writeStringToParcel(p, (const char*)
+            p.writeString8AsString16((const char*)(appStatus[i].aid_ptr));
+            p.writeString8AsString16((const char*)
                                           (appStatus[i].app_label_ptr));
             p.writeInt32(appStatus[i].pin1_replaced);
             p.writeInt32(appStatus[i].pin1);
@@ -4245,10 +4269,10 @@ static int responseCarrierRestrictions(Parcel &p, void *response, size_t respons
   appendPrintBuf(" %s allowed_carriers:", printBuf);
   for(int32_t i = 0; i < p_cr->len_allowed_carriers; i++) {
     RIL_Carrier *carrier = p_cr->allowed_carriers + i;
-    writeStringToParcel(p, carrier->mcc);
-    writeStringToParcel(p, carrier->mnc);
+    p.writeString8AsString16(carrier->mcc);
+    p.writeString8AsString16(carrier->mnc);
     p.writeInt32(carrier->match_type);
-    writeStringToParcel(p, carrier->match_data);
+    p.writeString8AsString16(carrier->match_data);
     appendPrintBuf(" %s [%d mcc: %s, mnc: %s, match_type: %d, match_data: %s],", printBuf,
                    i, carrier->mcc, carrier->mnc, carrier->match_type, carrier->match_data);
   }
@@ -4256,10 +4280,10 @@ static int responseCarrierRestrictions(Parcel &p, void *response, size_t respons
   appendPrintBuf(" %s excluded_carriers:", printBuf);
   for(int32_t i = 0; i < p_cr->len_excluded_carriers; i++) {
     RIL_Carrier *carrier = p_cr->excluded_carriers + i;
-    writeStringToParcel(p, carrier->mcc);
-    writeStringToParcel(p, carrier->mnc);
+    p.writeString8AsString16(carrier->mcc);
+    p.writeString8AsString16(carrier->mnc);
     p.writeInt32(carrier->match_type);
-    writeStringToParcel(p, carrier->match_data);
+    p.writeString8AsString16(carrier->match_data);
     appendPrintBuf(" %s [%d mcc: %s, mnc: %s, match_type: %d, match_data: %s],", printBuf,
                    i, carrier->mcc, carrier->mnc, carrier->match_type, carrier->match_data);
   }
@@ -4282,7 +4306,7 @@ static int responsePcoData(Parcel &p, void *response, size_t responselen) {
 
   RIL_PCO_Data *p_cur = (RIL_PCO_Data *)response;
   p.writeInt32(p_cur->cid);
-  writeStringToParcel(p, p_cur->bearer_proto);
+  p.writeString8AsString16(p_cur->bearer_proto);
   p.writeInt32(p_cur->pco_id);
   p.writeInt32(p_cur->contents_length);
   p.write(p_cur->contents, p_cur->contents_length);
@@ -4299,16 +4323,16 @@ static void sendAdnRecordInfo(Parcel &p, int num_records, RIL_AdnRecordInfo reco
         startResponse;
         for (int i = 0; i < num_records; i++) {
             p.writeInt32(recordInfo[i].record_id);
-            writeStringToParcel(p, (const char*)(recordInfo[i].name));
-            writeStringToParcel(p, (const char*)(recordInfo[i].number));
+            p.writeString8AsString16((const char*)(recordInfo[i].name));
+            p.writeString8AsString16((const char*)(recordInfo[i].number));
 
             p.writeInt32(recordInfo[i].email_elements);
             for (int j = 0; j < recordInfo[i].email_elements; j++) {
-                writeStringToParcel(p, (const char*)(recordInfo[i].email[j]));
+                p.writeString8AsString16((const char*)(recordInfo[i].email[j]));
             }
             p.writeInt32(recordInfo[i].anr_elements);
             for (int j = 0; j < recordInfo[i].anr_elements; j++) {
-                writeStringToParcel(p, (const char*)(recordInfo[i].ad_number[j]));
+                p.writeString8AsString16((const char*)(recordInfo[i].ad_number[j]));
             }
 
             appendPrintBuf("%s[record_id=%d,number=%s,anr_elements=%d,email_elements=%d],",
@@ -4498,10 +4522,12 @@ static void listenCallback (int fd, short flags, void *param) {
 
     SocketListenParam *p_info = (SocketListenParam *)param;
 
+#ifndef RIL_FOR_MDM_LE
     if(RIL_SAP_SOCKET == p_info->type) {
         listenParam = (MySocketListenParam *)param;
         sapSocket = listenParam->socket;
     }
+#endif
 
     struct sockaddr_un peeraddr;
     socklen_t socklen = sizeof (peeraddr);
@@ -4937,12 +4963,14 @@ static void startListen(RIL_SOCKET_ID socket_id, SocketListenParam* socket_liste
 
     RLOGI("Start to listen %s", rilSocketIdToString(socket_id));
 
+#ifndef RIL_FOR_MDM_LE
     fdListen = android_get_control_socket(socket_name);
+#endif
     if (fdListen < 0) {
+#ifndef RIL_FOR_MDM_LE
         RLOGW("Failed to get socket %s, creating local socket", socket_name);
-        fdListen = socket_local_server(socket_name,
-                                       ANDROID_SOCKET_NAMESPACE_RESERVED,
-                                       SOCK_STREAM);
+#endif
+        fdListen = socket_local_server(socket_name, SOCK_STREAM);
         if (fdListen < 0) {
             RLOGE("Failed to create socket %s", socket_name);
             exit(-1);
@@ -5101,12 +5129,14 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
         strlcat(rildebug, inst, MAX_DEBUG_SOCKET_NAME_LENGTH);
     }
 
+#ifndef RIL_FOR_MDM_LE
     s_fdDebug = android_get_control_socket(rildebug);
+#endif
     if (s_fdDebug < 0) {
+#ifndef RIL_FOR_MDM_LE
         RLOGW("Failed to get socket : %s errno:%d, creating local socket", rildebug, errno);
-        s_fdDebug = socket_local_server(rildebug,
-                                        ANDROID_SOCKET_NAMESPACE_RESERVED,
-                                        SOCK_STREAM);
+#endif
+        s_fdDebug = socket_local_server(rildebug, SOCK_STREAM);
         if (s_fdDebug < 0) {
             RLOGW("Failed to create socket : %s errno:%d", rildebug, errno);
             exit(-1);
@@ -5133,11 +5163,11 @@ extern "C" void
 RIL_register_socket (RIL_RadioFunctions *(*Init)(const struct RIL_Env *, int, char **),RIL_SOCKET_TYPE socketType, int argc, char **argv) {
 
     RIL_RadioFunctions* UimFuncs = NULL;
-
+#ifndef RIL_FOR_MDM_LE
     if(Init) {
         UimFuncs = Init(&RilSapSocket::uimRilEnv, argc, argv);
 
-        switch(socketType) {
+        switch (socketType) {
             case RIL_SAP_SOCKET:
                 RilSapSocket::initSapSocket("sap_uim_socket1", UimFuncs);
 
@@ -5156,6 +5186,7 @@ RIL_register_socket (RIL_RadioFunctions *(*Init)(const struct RIL_Env *, int, ch
             default:;
         }
     }
+#endif
 }
 
 // Check and remove RequestInfo if its a response and not just ack sent back
@@ -5545,6 +5576,12 @@ processRadioState(RIL_RadioState newRadioState, RIL_SOCKET_ID socket_id) {
     return newRadioState;
 }
 
+static int64_t getSystemTimeInMs() {
+    struct timeval t;
+    t.tv_sec = t.tv_usec = 0;
+    gettimeofday(&t, NULL);
+    return t.tv_sec * 1000LL + t.tv_usec / 1000LL;
+}
 
 #if defined(ANDROID_MULTI_SIM)
 extern "C"
@@ -5603,7 +5640,7 @@ void RIL_onUnsolicitedResponse(int unsolResponse, const void *data,
     // the elapsedRealTime might cause us to goto
     // sleep.
     if (unsolResponse == RIL_UNSOL_NITZ_TIME_RECEIVED) {
-        timeReceived = elapsedRealtime();
+        timeReceived = getSystemTimeInMs();
     }
 
     appendPrintBuf("[UNSL]< %s", requestToString(unsolResponse));
@@ -6084,7 +6121,7 @@ rilSocketIdToString(RIL_SOCKET_ID socket_id)
  * Returns true for a debuggable build.
  */
 static bool isDebuggable() {
-    char debuggable[PROP_VALUE_MAX];
+    char debuggable[PROPERTY_VALUE_MAX];
     property_get("ro.debuggable", debuggable, "0");
     if (strcmp(debuggable, "1") == 0) {
         return true;

@@ -18,8 +18,8 @@ extern "C"
 void *ril_socket_process_requests_loop(void *arg);
 
 #include "RilSocket.h"
-#include <cutils/sockets.h>
-#include <utils/Log.h>
+#include <cutils/sockets2.h>
+#include <utils/Log2.h>
 #include <assert.h>
 #define SOCKET_LISTEN_BACKLOG 0
 
@@ -31,9 +31,7 @@ int RilSocket::socketInit(void) {
     listenFd = android_get_control_socket(name);
 
     if (listenFd < 0) {
-        listenFd = socket_local_server(name,
-                                       ANDROID_SOCKET_NAMESPACE_RESERVED,
-                                       SOCK_STREAM);
+        listenFd = socket_local_server(name, SOCK_STREAM);
     }
 
     //Start listening

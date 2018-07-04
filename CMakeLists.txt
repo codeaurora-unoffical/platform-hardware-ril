@@ -22,10 +22,10 @@ include_directories(BEFORE include)
 add_subdirectory( rild )
 add_subdirectory( librilutils )
 add_subdirectory( libril )
+add_subdirectory( mocks )
 
 # <--------------------------------------------->
 # adding header file install
 # <--------------------------------------------->
 install( DIRECTORY include/libril DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
 install( DIRECTORY include/telephony DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
-

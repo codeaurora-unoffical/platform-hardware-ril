@@ -26,17 +26,20 @@
 
 #include <telephony/ril.h>
 #define LOG_TAG "RILD"
-#include <utils/Log.h>
-#include <cutils/properties.h>
-#include <cutils/sockets.h>
+#include <utils/Log2.h>
+#include <cutils/properties2.h>
+#include <cutils/sockets2.h>
+#ifndef RIL_FOR_MDM_LE
+#include <private/android_filesystem_config.h>
+#include "hardware/qemu_pipe.h"
 #include <sys/capability.h>
+#endif
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <libril/ril_ex.h>
 
-#include <private/android_filesystem_config.h>
-#include "hardware/qemu_pipe.h"
+
 
 #define LIB_PATH_PROPERTY   "rild.libpath"
 #define LIB_ARGS_PROPERTY   "rild.libargs"
@@ -102,7 +105,8 @@ static int make_argv(char * args, char ** argv) {
  * Our group, cache, was set by init.
  */
 void switchUser() {
-    char debuggable[PROP_VALUE_MAX];
+#ifndef RIL_FOR_MDM_LE
+    char debuggable[PROPERTY_VALUE_MAX];
 
     prctl(PR_SET_KEEPCAPS, 1, 0, 0, 0);
     if (setresuid(AID_RADIO, AID_RADIO, AID_RADIO) == -1) {
@@ -140,6 +144,7 @@ void switchUser() {
     if (strcmp(debuggable, "1") == 0) {
         prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
     }
+#endif
 }
 
 int main(int argc, char **argv) {
@@ -250,17 +255,16 @@ int main(int argc, char **argv) {
             int  tries = 5;
 #define  QEMUD_SOCKET_NAME    "qemud"
 
+#ifndef RIL_FOR_MDM_LE
             while (1) {
-                int  fd;
+                int  fd = -1;
 
                 sleep(1);
 
                 fd = qemu_pipe_open("qemud:gsm");
                 if (fd < 0) {
                     fd = socket_local_client(
-                                QEMUD_SOCKET_NAME,
-                                ANDROID_SOCKET_NAMESPACE_RESERVED,
-                                SOCK_STREAM );
+                                QEMUD_SOCKET_NAME, SOCK_STREAM );
                 }
                 if (fd >= 0) {
                     close(fd);
@@ -277,6 +281,7 @@ int main(int argc, char **argv) {
                 if (--tries == 0)
                     break;
             }
+#endif
             if (!done) {
                 RLOGE("could not connect to %s socket (giving up): %s",
                     QEMUD_SOCKET_NAME, strerror(errno));
@@ -389,7 +394,7 @@ OpenLib:
 done:
 
     RLOGD("RIL_Init starting sleep loop");
-    while (true) {
+    while (1) {
         sleep(UINT32_MAX);
     }
 }

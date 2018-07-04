@@ -8,7 +8,7 @@ include_directories(BEFORE
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-## generate c bindings from proto files
+# generate c bindings from proto files
 find_package(Nanopb REQUIRED)
 nanopb_generate_cpp(PROTO_SRCS PROTO_HDRS proto/sap-api.proto)
 set_source_files_properties(${PROTO_SRCS} ${PROTO_HDRS} PROPERTIES GENERATED TRUE)

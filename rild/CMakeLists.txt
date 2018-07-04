@@ -3,16 +3,20 @@ set(TARGET_NAME rild)
 
 include_directories(BEFORE
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/ril/mocks
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 set(SOURCE_FILES rild.c)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+
 add_definitions( -DHAVE_ANDROID_OS )
 add_definitions( -DRIL_SHLIB )
 
 add_executable (${TARGET_NAME} ${SOURCE_FILES})
-target_link_libraries(${TARGET_NAME} rilutils ril dl log cutils ${GLIB_LIBRARIES})
+target_link_libraries(${TARGET_NAME} rilutils ril dl mockcutils ${GLIB_LIBRARIES})
 
 install ( TARGETS ${TARGET_NAME}
           RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

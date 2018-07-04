@@ -33,7 +33,7 @@
 #include "misc.h"
 #include <getopt.h>
 #include <sys/socket.h>
-#include <cutils/sockets.h>
+#include <cutils/sockets2.h>
 #include <termios.h>
 #include <sys/system_properties.h>
 #ifndef ANDROID
@@ -44,7 +44,7 @@
 #include "hardware/qemu_pipe.h"
 
 #define LOG_TAG "RIL"
-#include <utils/Log.h>
+#include <utils/Log2.h>
 
 #ifndef ANDROID
 int __system_property_get(const char* key, char* value) {
@@ -3320,9 +3320,7 @@ mainLoop(void *param __unused)
                     fd = qemu_pipe_open("qemud:gsm");
                     if (fd < 0) {
                         /* Qemu-specific control socket */
-                        fd = socket_local_client( "qemud",
-                                                  ANDROID_SOCKET_NAMESPACE_RESERVED,
-                                                  SOCK_STREAM );
+                        fd = socket_local_client( "qemud", SOCK_STREAM );
                         if (fd >= 0 ) {
                             char  answer[2];
 
@@ -3337,9 +3335,7 @@ mainLoop(void *param __unused)
                     }
                 }
                 else
-                    fd = socket_local_client( s_device_path,
-                                            ANDROID_SOCKET_NAMESPACE_FILESYSTEM,
-                                            SOCK_STREAM );
+                    fd = socket_local_client( s_device_path, SOCK_STREAM );
             } else if (s_device_path != NULL) {
                 fd = open (s_device_path, O_RDWR);
                 if ( fd >= 0 && !memcmp( s_device_path, "/dev/ttyS", 9 ) ) {

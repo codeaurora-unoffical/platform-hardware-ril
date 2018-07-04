@@ -15,6 +15,9 @@
 ** limitations under the License.
 */
 
+#ifndef RIL_EVENT_H_INCLUDED
+#define RIL_EVENT_H_INCLUDED
+
 // Max number of fd's we watch at any one time.  Increase if necessary.
 #define MAX_FD_EVENTS 8
 
@@ -50,3 +53,4 @@ void ril_event_del(struct ril_event * ev);
 // Event loop
 void ril_event_loop();
 
+#endif
