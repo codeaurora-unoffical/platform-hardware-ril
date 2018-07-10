@@ -304,6 +304,7 @@ static int responseSSData(Parcel &p, void *response, size_t responselen);
 static int responseLceStatus(Parcel &p, void *response, size_t responselen);
 static int responseLceData(Parcel &p, void *response, size_t responselen);
 static int responseActivityData(Parcel &p, void *response, size_t responselen);
+static int responsePcoData(Parcel &p, void *response, size_t responselen);
 
 static int decodeVoiceRadioTechnology (RIL_RadioState radioState);
 static int decodeCdmaSubscriptionSource (RIL_RadioState radioState);
@@ -4988,6 +4989,33 @@ internalRequestTimedCallback (RIL_TimedCallback callback, void *param,
     return p_info;
 }
 
+static int responsePcoData(Parcel &p, void *response, size_t responselen) {
+  if (response == NULL || responselen != sizeof(RIL_PCO_Data)) {
+    if (response == NULL) {
+      RLOGE("invalid response: NULL");
+    }
+    else {
+      RLOGE("responseLceData: invalid response length %d expecting len: d%",
+            sizeof(RIL_PCO_Data), responselen);
+    }
+    return RIL_ERRNO_INVALID_RESPONSE;
+  }
+
+  RIL_PCO_Data *p_cur = (RIL_PCO_Data *)response;
+  p.writeInt32(p_cur->cid);
+  writeStringToParcel(p, p_cur->bearer_proto);
+  p.writeInt32(p_cur->pco_id);
+  p.writeInt32(p_cur->contents_length);
+  writeStringToParcel(p, p_cur->contents);
+
+  startResponse;
+  appendPrintBuf("cid %d, bearer_proto %s pco_id %d length %d %s",
+                 p_cur->cid, (char*)p_cur->bearer_proto, p_cur->pco_id,
+                 p_cur->contents_length, (char*) p_cur->contents);
+  closeResponse;
+
+  return 0;
+}
 
 extern "C" void
 RIL_requestTimedCallback (RIL_TimedCallback callback, void *param,
