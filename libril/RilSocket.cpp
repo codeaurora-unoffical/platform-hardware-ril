@@ -57,13 +57,13 @@ void RilSocket::sSocketListener(int fd, short flags, void *param) {
     listenParam.sListenParam.type = RIL_SAP_SOCKET;
 
 #if (SIM_COUNT == 1)
-    listenParam.sListenParam.socket_id == RIL_SOCKET_1;
+    listenParam.sListenParam.socket_id = RIL_SOCKET_1;
 #elif (SIM_COUNT == 2)
-    listenParam.sListenParam.socket_id == RIL_SOCKET_2;
+    listenParam.sListenParam.socket_id = RIL_SOCKET_2;
 #elif (SIM_COUNT == 3)
-    listenParam.sListenParam.socket_id == RIL_SOCKET_3;
+    listenParam.sListenParam.socket_id = RIL_SOCKET_3;
 #elif (SIM_COUNT == 4)
-    listenParam.sListenParam.socket_id == RIL_SOCKET_4;
+    listenParam.sListenParam.socket_id = RIL_SOCKET_4;
 #endif
 
     listenCallback_helper(fd, flags, (void*)&listenParam);

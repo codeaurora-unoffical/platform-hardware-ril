@@ -398,7 +398,7 @@ static char * RIL_getRilSocketName() {
 
 extern "C"
 void RIL_setRilSocketName(const char * s) {
-    strncpy(rild, s, MAX_SOCKET_NAME_LENGTH);
+    strlcpy(rild, s, MAX_SOCKET_NAME_LENGTH);
 }
 
 static char *
@@ -4918,21 +4918,21 @@ static void startListen(RIL_SOCKET_ID socket_id, SocketListenParam* socket_liste
 
     switch(socket_id) {
         case RIL_SOCKET_1:
-            strncpy(socket_name, RIL_getRilSocketName(), 9);
+            strlcpy(socket_name, RIL_getRilSocketName(), 10);
             break;
     #if (SIM_COUNT >= 2)
         case RIL_SOCKET_2:
-            strncpy(socket_name, SOCKET2_NAME_RIL, 9);
+            strlcpy(socket_name, SOCKET2_NAME_RIL, 10);
             break;
     #endif
     #if (SIM_COUNT >= 3)
         case RIL_SOCKET_3:
-            strncpy(socket_name, SOCKET3_NAME_RIL, 9);
+            strlcpy(socket_name, SOCKET3_NAME_RIL, 10);
             break;
     #endif
     #if (SIM_COUNT >= 4)
         case RIL_SOCKET_4:
-            strncpy(socket_name, SOCKET4_NAME_RIL, 9);
+            strlcpy(socket_name, SOCKET4_NAME_RIL, 10);
             break;
     #endif
         default:

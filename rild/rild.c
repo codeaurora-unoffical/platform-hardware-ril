@@ -88,8 +88,9 @@ static int make_argv(char * args, char ** argv) {
     int count = 1;
     char * tok;
     char * s = args;
+    char *saveptr = NULL;
 
-    while ((tok = strtok(s, " \0"))) {
+    while ((tok = strtok_r(s, " \0", &saveptr))) {
         argv[count] = tok;
         s = NULL;
         count++;
