@@ -3587,7 +3587,7 @@ static int responseCellInfoListV6(Parcel &p, void *response, size_t responselen)
         p.writeInt32((int)p_cur->cellInfoType);
         p.writeInt32(p_cur->registered);
         p.writeInt32(p_cur->timeStampType);
-        p.writeInt64(p_cur->timeStamp);
+        p.writeUint64(p_cur->timeStamp);
         switch(p_cur->cellInfoType) {
             case RIL_CELL_INFO_TYPE_GSM: {
                 p.writeInt32(p_cur->CellInfo.gsm.cellIdentityGsm.mcc);
@@ -3677,7 +3677,7 @@ static int responseCellInfoListV12(Parcel &p, void *response, size_t responselen
         p.writeInt32((int)p_cur->cellInfoType);
         p.writeInt32(p_cur->registered);
         p.writeInt32(p_cur->timeStampType);
-        p.writeInt64(p_cur->timeStamp);
+        p.writeUint64(p_cur->timeStamp);
         switch(p_cur->cellInfoType) {
             case RIL_CELL_INFO_TYPE_GSM: {
                 p.writeInt32(p_cur->CellInfo.gsm.cellIdentityGsm.mcc);

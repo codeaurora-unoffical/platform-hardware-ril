@@ -547,3 +547,15 @@ status_t Parcel::writeString8AsString16(const char *s8) {
 
     return NO_ERROR;
 }
+
+status_t Parcel::writeUint64(uint64_t val) {
+    return writeAligned(val);
+}
+
+status_t Parcel::readUint64(uint64_t *pArg) const {
+    return readAligned(pArg);
+}
+
+uint64_t Parcel::readUint64() const {
+    return readAligned<uint64_t>();
+}

@@ -72,6 +72,9 @@ public:
     void*               writeInplace(size_t len);
     const char*         readCString() const;
     status_t  writeString8AsString16(const char *s);
+    uint64_t            readUint64() const;
+    status_t            readUint64(uint64_t *pArg) const;
+    status_t            writeUint64(uint64_t val);
 
 private:
     status_t            continueWrite(size_t desired);
