@@ -2,9 +2,9 @@
 set(TARGET_NAME ril)
 
 include_directories(BEFORE
-    ${CMAKE_SOURCE_DIR}/ril/include
-    ${CMAKE_SOURCE_DIR}/ril/librilutils
-    ${CMAKE_SOURCE_DIR}/ril/mocks
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/librilutils
+    ${CMAKE_SOURCE_DIR}/mocks
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
