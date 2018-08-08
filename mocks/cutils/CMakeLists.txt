@@ -5,7 +5,7 @@ set( CMAKE_CONFIGURATION_TYPES
 set( CMAKE_CONFIGURATION_TYPES ${CMAKE_CONFIGURATION_TYPES} CACHE STRING "Available build configurations." FORCE )
 
 include_directories(BEFORE
-        ${CMAKE_SOURCE_DIR}/ril/mocks )
+        ${CMAKE_SOURCE_DIR}/mocks )
 
 set( TARGET_MOCK_LIBCUTILS mockcutils )
 

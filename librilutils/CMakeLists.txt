@@ -2,7 +2,7 @@
 set(TARGET_NAME rilutils)
 
 include_directories(BEFORE
-    ${CMAKE_SOURCE_DIR}/ril/include
+    ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -25,3 +25,6 @@ install ( TARGETS ${TARGET_NAME}
           ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
           LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
+install( FILES
+        ${PROTO_HDRS}
+        DESTINATION include/telephony/ril/librilutils/proto )

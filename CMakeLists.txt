@@ -17,6 +17,20 @@ set(CMAKE_CONFIGURATION_TYPES
   )
 set(CMAKE_CONFIGURATION_TYPES ${CMAKE_CONFIGURATION_TYPES} CACHE STRING "Available build configurations." FORCE)
 
+
+add_definitions(-DRIL_FOR_MDM_LE)
+
+set(SYSTEMD_UNITDIR "${CMAKE_INSTALL_PREFIX}/../lib/systemd/system" CACHE PATH
+        "Set directory to install systemd unit files")
+
+if (RIL_FOR_EXTERNAL_AP)
+    add_definitions(-DRIL_FOR_EXTERNAL_AP)
+    # Feature flag used by some data header files
+    add_definitions(-DFEATURE_EXTERNAL_AP)
+    install(FILES scripts/rild.service
+            DESTINATION ${SYSTEMD_UNITDIR})
+endif (RIL_FOR_EXTERNAL_AP)
+
 include_directories(BEFORE include)
 
 add_subdirectory( rild )
@@ -29,3 +43,17 @@ add_subdirectory( mocks )
 # <--------------------------------------------->
 install( DIRECTORY include/libril DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
 install( DIRECTORY include/telephony DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} )
+
+# <--------------------------------------------->
+# adding RPM generation
+# <--------------------------------------------->
+include (InstallRequiredSystemLibraries)
+set(CPACK_PACKAGE_VERSION "1.0")
+set(CPACK_GENERATOR "RPM")
+set(CPACK_PACKAGE_RELEASE 1)
+set(CPACK_PACKAGE_CONTACT "Automotive BU")
+set(CPACK_PACKAGE_VENDOR "QTI Inc.")
+set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+SET(CPACK_SOURCE_GENERATOR "TGZ")
+SET(CPACK_SOURCE_IGNORE_FILES "/raw/" "/\\\\.git/")
+include(CPack)
