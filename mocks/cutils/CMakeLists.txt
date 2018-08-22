@@ -25,7 +25,7 @@ set_target_properties(${TARGET_MOCK_LIBCUTILS} PROPERTIES
 
 # install to target
 install ( TARGETS ${TARGET_MOCK_LIBCUTILS}
-        LIBRARY DESTINATION lib )
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
 set( MOCK_CUTILS_HEADERS
         sockets2.h

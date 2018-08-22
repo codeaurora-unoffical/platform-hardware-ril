@@ -25,4 +25,4 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 # install to target
 install ( TARGETS ${TARGET_PARCEL}
-        LIBRARY DESTINATION lib )
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
