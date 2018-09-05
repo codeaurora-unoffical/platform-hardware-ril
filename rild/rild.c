@@ -201,11 +201,11 @@ int main(int argc, char **argv) {
     /* special override when in the emulator */
 #if 1
     {
-        static char*  arg_overrides[5];
+        static char*  arg_overrides[5] = { NULL };
         static char   arg_device[32];
         int           done = 0;
 
-	arg_overrides[0] = argv[0];
+        arg_overrides[0] = argv[0];
 
 #define  REFERENCE_RIL_PATH  "libreference-ril.so"
 
