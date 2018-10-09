@@ -27,13 +27,17 @@ if (RIL_FOR_EXTERNAL_AP)
     add_definitions(-DRIL_FOR_EXTERNAL_AP)
     # Feature flag used by some data header files
     add_definitions(-DFEATURE_EXTERNAL_AP)
-    install(FILES scripts/rild.service
-            DESTINATION ${SYSTEMD_UNITDIR})
+    if (NOT MACHINE_HAS_CV2X_ONLY)
+        install(FILES scripts/rild.service
+                DESTINATION ${SYSTEMD_UNITDIR})
+    endif (NOT MACHINE_HAS_CV2X_ONLY)
 endif (RIL_FOR_EXTERNAL_AP)
 
 include_directories(BEFORE include)
 
-add_subdirectory( rild )
+if (NOT MACHINE_HAS_CV2X_ONLY)
+    add_subdirectory( rild )
+endif (NOT MACHINE_HAS_CV2X_ONLY)
 add_subdirectory( librilutils )
 add_subdirectory( libril )
 add_subdirectory( mocks )
