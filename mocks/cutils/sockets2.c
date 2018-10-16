@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <glib.h>
 
 #define SOCKET_PATH_PREFIX "/tmp/"
 
@@ -43,8 +44,8 @@ static int make_sockaddr_un(const char *name, int type, struct sockaddr_un* addr
                   - offsetof(struct sockaddr_un, sun_path) - 1) {
         return -1;
     }
-    strcpy(addr->sun_path, SOCKET_PATH_PREFIX);
-    strcat(addr->sun_path, name);
+    g_strlcpy(addr->sun_path, SOCKET_PATH_PREFIX, sizeof(addr->sun_path) + 1);
+    g_strlcat(addr->sun_path, name, sizeof(addr->sun_path) + 1);
     addr->sun_family = AF_LOCAL;
 
     return 0;

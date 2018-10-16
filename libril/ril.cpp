@@ -64,6 +64,7 @@
 extern "C" {
 #include <cutils/properties2.h>
 #include <cutils/sockets2.h>
+#include <glib.h>
 }
 
 extern "C" void
@@ -409,7 +410,7 @@ static char * RIL_getRilSocketName() {
 
 extern "C"
 void RIL_setRilSocketName(const char * s) {
-    strncpy(rild, s, MAX_SOCKET_NAME_LENGTH);
+    g_strlcpy(rild, s, sizeof(rild));
 }
 
 static char *
@@ -423,9 +424,9 @@ strndup16to8(const char16_t *s16) {
     std::string dest = convert.to_bytes(source);
     int destLen = dest.length();
     char * cstr = (char *) malloc(sizeof(char) * (destLen + 1));
-    strncpy(cstr, dest.c_str(), destLen);
-    cstr[destLen] = '\0';
-
+    if (cstr != NULL) {
+        g_strlcpy(cstr, dest.c_str(), sizeof(char) * (destLen + 1));
+    }
     return cstr;
 }
 
@@ -4939,21 +4940,21 @@ static void startListen(RIL_SOCKET_ID socket_id, SocketListenParam* socket_liste
 
     switch(socket_id) {
         case RIL_SOCKET_1:
-            strncpy(socket_name, RIL_getRilSocketName(), 9);
+            g_strlcpy(socket_name, RIL_getRilSocketName(), sizeof (socket_name));
             break;
     #if (SIM_COUNT >= 2)
         case RIL_SOCKET_2:
-            strncpy(socket_name, SOCKET2_NAME_RIL, 9);
+            g_strlcpy(socket_name, SOCKET2_NAME_RIL, sizeof (socket_name));
             break;
     #endif
     #if (SIM_COUNT >= 3)
         case RIL_SOCKET_3:
-            strncpy(socket_name, SOCKET3_NAME_RIL, 9);
+            g_strlcpy(socket_name, SOCKET3_NAME_RIL, sizeof (socket_name));
             break;
     #endif
     #if (SIM_COUNT >= 4)
         case RIL_SOCKET_4:
-            strncpy(socket_name, SOCKET4_NAME_RIL, 9);
+            g_strlcpy(socket_name, SOCKET4_NAME_RIL, sizeof (socket_name));
             break;
     #endif
         default:
@@ -6121,7 +6122,7 @@ rilSocketIdToString(RIL_SOCKET_ID socket_id)
  * Returns true for a debuggable build.
  */
 static bool isDebuggable() {
-    char debuggable[PROPERTY_VALUE_MAX];
+    char debuggable[PROPERTY_VALUE_MAX] = "0";
     property_get("ro.debuggable", debuggable, "0");
     if (strcmp(debuggable, "1") == 0) {
         return true;
