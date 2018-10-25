@@ -19,6 +19,9 @@ add_library ( ${TARGET_MOCK_LIBCUTILS} SHARED
         ${MOCK_CUTILS_SOURCES}
         )
 
+target_link_libraries(${TARGET_MOCK_LIBCUTILS}
+    ${GLIB_LIBRARIES})
+
 set_target_properties(${TARGET_MOCK_LIBCUTILS} PROPERTIES
         VERSION 1.0.0
         SOVERSION 1)
