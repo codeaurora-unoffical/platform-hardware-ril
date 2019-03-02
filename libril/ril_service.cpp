@@ -3012,7 +3012,7 @@ int radio::getIccCardStatusResponse(int slotId,
     if (radioService[slotId]->mRadioResponse != NULL) {
         RadioResponseInfo responseInfo = {};
         populateResponseInfo(responseInfo, serial, responseType, e);
-        CardStatus cardStatus = {};
+        CardStatus cardStatus = {CardState::ABSENT, PinState::UNKNOWN, -1, -1, -1, {}};
         RIL_CardStatus_v6 *p_cur = ((RIL_CardStatus_v6 *) response);
         if (response == NULL || responseLen != sizeof(RIL_CardStatus_v6)
                 || p_cur->gsm_umts_subscription_app_index >= p_cur->num_applications
@@ -7047,6 +7047,10 @@ void convertRilSignalStrengthToHal(void *response, size_t responseLen,
 
     signalStrength.gw.signalStrength = rilSignalStrength->GW_SignalStrength.signalStrength;
     signalStrength.gw.bitErrorRate = rilSignalStrength->GW_SignalStrength.bitErrorRate;
+    // RIL_SignalStrength_v10 not support gw.timingAdvance. Set to INT_MAX as
+    // invalid value.
+    signalStrength.gw.timingAdvance = INT_MAX;
+
     signalStrength.cdma.dbm = rilSignalStrength->CDMA_SignalStrength.dbm;
     signalStrength.cdma.ecio = rilSignalStrength->CDMA_SignalStrength.ecio;
     signalStrength.evdo.dbm = rilSignalStrength->EVDO_SignalStrength.dbm;
