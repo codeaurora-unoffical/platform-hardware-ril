@@ -50,13 +50,19 @@ extern RecordStream *record_stream_new(int fd, size_t maxRecordLen)
 
     ret = (RecordStream *)calloc(1, sizeof(RecordStream));
 
-    ret->fd = fd;
-    ret->maxRecordLen = maxRecordLen;
-    ret->buffer = (unsigned char *)malloc (maxRecordLen + HEADER_SIZE);
-
-    ret->unconsumed = ret->buffer;
-    ret->read_end = ret->buffer;
-    ret->buffer_end = ret->buffer + maxRecordLen + HEADER_SIZE;
+    if (ret) {
+        ret->fd = fd;
+        ret->maxRecordLen = maxRecordLen;
+        ret->buffer = (unsigned char*)malloc(maxRecordLen + HEADER_SIZE);
+        if (ret -> buffer) {
+            ret->unconsumed = ret->buffer;
+            ret->read_end = ret->buffer;
+            ret->buffer_end = ret->buffer + maxRecordLen + HEADER_SIZE;
+        } else {
+            free(ret);
+            return NULL;
+        }
+    }
 
     return ret;
 }
