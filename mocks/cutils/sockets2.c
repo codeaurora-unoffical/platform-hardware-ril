@@ -52,7 +52,7 @@ static int make_sockaddr_un(const char *name, int type, struct sockaddr_un* addr
 }
 
 
-int socket_local_server(const char *name, int type) {
+int ril_socket_local_server(const char *name, int type) {
     int fdListen = socket(AF_LOCAL, type, 0);
     if (fdListen < 0) {
         return -1;
@@ -74,7 +74,7 @@ int socket_local_server(const char *name, int type) {
     return fdListen;
 }
 
-int socket_local_client(const char *name, int type) {
+int ril_socket_local_client(const char *name, int type) {
     int s;
 
     s = socket(AF_LOCAL, type, 0);

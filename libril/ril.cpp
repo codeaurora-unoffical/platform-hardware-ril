@@ -4971,7 +4971,7 @@ static void startListen(RIL_SOCKET_ID socket_id, SocketListenParam* socket_liste
 #ifndef RIL_FOR_MDM_LE
         RLOGW("Failed to get socket %s, creating local socket", socket_name);
 #endif
-        fdListen = socket_local_server(socket_name, SOCK_STREAM);
+        fdListen = ril_socket_local_server(socket_name, SOCK_STREAM);
         if (fdListen < 0) {
             RLOGE("Failed to create socket %s", socket_name);
             exit(-1);
@@ -5137,7 +5137,7 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
 #ifndef RIL_FOR_MDM_LE
         RLOGW("Failed to get socket : %s errno:%d, creating local socket", rildebug, errno);
 #endif
-        s_fdDebug = socket_local_server(rildebug, SOCK_STREAM);
+        s_fdDebug = ril_socket_local_server(rildebug, SOCK_STREAM);
         if (s_fdDebug < 0) {
             RLOGW("Failed to create socket : %s errno:%d", rildebug, errno);
             exit(-1);

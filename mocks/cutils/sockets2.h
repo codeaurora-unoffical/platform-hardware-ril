@@ -30,7 +30,7 @@
 #ifndef SOURCES_SOCKETS_H
 #define SOURCES_SOCKETS_H
 
-int socket_local_server(const char *name, int type);
-int socket_local_client(const char *name, int type);
+int ril_socket_local_server(const char *name, int type);
+int ril_socket_local_client(const char *name, int type);
 
 #endif //SOURCES_SOCKETS_H
