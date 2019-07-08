@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,12 +30,15 @@
 #include "sockets2.h"
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <glib.h>
 
-#define SOCKET_PATH_PREFIX "/tmp/"
+#ifndef SOCKET_PATH_PREFIX
+#define SOCKET_PATH_PREFIX "/run/"
+#endif
 
 static int make_sockaddr_un(const char *name, int type, struct sockaddr_un* addr) {
     int namelen = strlen(name) + strlen(SOCKET_PATH_PREFIX);
@@ -70,6 +73,9 @@ int ril_socket_local_server(const char *name, int type) {
         close(fdListen);
         return -1;
     }
+    #ifdef RESTRICT_FILE_PERMS
+    chmod( addr.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP );
+    #endif
 
     return fdListen;
 }

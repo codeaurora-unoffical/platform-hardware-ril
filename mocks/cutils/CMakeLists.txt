@@ -14,6 +14,11 @@ set( MOCK_CUTILS_SOURCES
         properties2.c
         )
 
+if (NOT RIL_FOR_EXTERNAL_AP)
+    add_definitions(-DSOCKET_PATH_PREFIX="/dev/socket/ril/")
+    add_definitions(-DRESTRICT_FILE_PERMS)
+endif (NOT RIL_FOR_EXTERNAL_AP)
+
 # build library
 add_library ( ${TARGET_MOCK_LIBCUTILS} SHARED
         ${MOCK_CUTILS_SOURCES}
