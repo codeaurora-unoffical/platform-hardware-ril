@@ -46,6 +46,12 @@
 #define MAX_LIB_ARGS        16
 #define MAX_CAP_NUM         (CAP_TO_INDEX(CAP_LAST_CAP) + 1)
 
+#ifdef RESTRICT_FILE_PERMS
+#define UMASK_FILE_PERM_MASK (S_IXUSR | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH)
+#else
+#define UMASK_FILE_PERM_MASK (S_IXUSR | S_IXGRP | S_IXOTH)
+#endif
+
 static void usage(const char *argv0) {
     fprintf(stderr, "Usage: %s -l <ril impl library> [-- <args for impl library>]\n", argv0);
     exit(EXIT_FAILURE);
@@ -166,7 +172,8 @@ int main(int argc, char **argv) {
     RLOGD("**RIL Daemon Started**");
     RLOGD("**RILd param count=%d**", argc);
 
-    umask(S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH);
+    umask(UMASK_FILE_PERM_MASK);
+
     for (i = 1; i < argc ;) {
         if (0 == strcmp(argv[i], "-l") && (argc - i > 1)) {
             rilLibPath = argv[i + 1];
