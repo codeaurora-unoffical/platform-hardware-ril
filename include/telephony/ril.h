@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Not a contribution.
+ */
+
+/*
  * Copyright (C) 2006 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -1237,27 +1242,44 @@ typedef struct {
                   * Reference: 3GPP TS 25.123, section 9.1.1.1 */
 } RIL_TD_SCDMA_SignalStrength;
 
-/* Deprecated, use RIL_SignalStrength_v6 */
+typedef struct
+{
+    int32_t rsrp;        /* The current Reference Signal Receive Power in dBm multipled by -1.
+                          * Range: 44 to 140 dBm
+                          * SHRT_MAX: 0x7FFF denotes modem is not in EN-DC connected mode.
+                          * INT_MAX: 0x7FFFFFFF denotes invalid value.
+                          * Reference: 3GPP TS 38.215 */
+    int32_t rsrq;        /* The current Reference Signal Receive Quality in dB multiplied by -1.
+                          * Range: 20 to 3 dB.
+                          * INT_MAX: 0x7FFFFFFF denotes invalid value.
+                          * Reference: 3GPP TS 38.215 */
+    int32_t rssnr;       /* The current reference signal signal-to-noise ratio in 0.1 dB units.
+                          * Range: -200 to +300 (-200 = -20.0 dB, +300 = 30dB).
+                          * SHRT_MAX : 0x7FFF denotes modem is not in EN-DC connected mode.
+                          * INT_MAX : 0x7FFFFFFF denotes invalid value. */
+}RIL_NR5G_SignalStrength;
+
+/* Deprecated, use RIL_SignalStrength_v11 */
 typedef struct {
     RIL_GW_SignalStrength   GW_SignalStrength;
     RIL_CDMA_SignalStrength CDMA_SignalStrength;
     RIL_EVDO_SignalStrength EVDO_SignalStrength;
 } RIL_SignalStrength_v5;
-
+/* Deprecated, use RIL_SignalStrength_v11 */
 typedef struct {
     RIL_GW_SignalStrength   GW_SignalStrength;
     RIL_CDMA_SignalStrength CDMA_SignalStrength;
     RIL_EVDO_SignalStrength EVDO_SignalStrength;
     RIL_LTE_SignalStrength  LTE_SignalStrength;
 } RIL_SignalStrength_v6;
-
+/* Deprecated, use RIL_SignalStrength_v11 */
 typedef struct {
     RIL_GW_SignalStrength       GW_SignalStrength;
     RIL_CDMA_SignalStrength     CDMA_SignalStrength;
     RIL_EVDO_SignalStrength     EVDO_SignalStrength;
     RIL_LTE_SignalStrength_v8   LTE_SignalStrength;
 } RIL_SignalStrength_v8;
-
+/* Deprecated, use RIL_SignalStrength_v11 */
 typedef struct {
     RIL_GW_SignalStrength       GW_SignalStrength;
     RIL_CDMA_SignalStrength     CDMA_SignalStrength;
@@ -1265,6 +1287,16 @@ typedef struct {
     RIL_LTE_SignalStrength_v8   LTE_SignalStrength;
     RIL_TD_SCDMA_SignalStrength TD_SCDMA_SignalStrength;
 } RIL_SignalStrength_v10;
+
+typedef struct {
+    RIL_GW_SignalStrength       GSM_SignalStrength;
+    RIL_SignalStrengthWcdma     WCDMA_SignalStrength;
+    RIL_CDMA_SignalStrength     CDMA_SignalStrength;
+    RIL_EVDO_SignalStrength     EVDO_SignalStrength;
+    RIL_LTE_SignalStrength_v8   LTE_SignalStrength;
+    RIL_TD_SCDMA_SignalStrength TD_SCDMA_SignalStrength;
+    RIL_NR5G_SignalStrength     NR5G_SignalStrength;
+} RIL_SignalStrength_v11;
 
 typedef struct {
     int mcc;    /* 3-digit Mobile Country Code, 0..999, INT_MAX if unknown */

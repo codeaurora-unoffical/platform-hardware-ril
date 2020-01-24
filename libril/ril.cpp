@@ -1,5 +1,10 @@
 /* //device/libs/telephony/ril.cpp
 **
+** Copyright (c) 2020 The Linux Foundation. All rights reserved.
+** Not a contribution.
+*/
+
+/*
 ** Copyright 2006, The Android Open Source Project
 **
 ** Licensed under the Apache License, Version 2.0 (the "License");
@@ -3300,17 +3305,17 @@ static int responseCdmaInformationRecords(Parcel &p,
     return 0;
 }
 
-static void responseRilSignalStrengthV5(Parcel &p, RIL_SignalStrength_v10 *p_cur) {
-    p.writeInt32(p_cur->GW_SignalStrength.signalStrength);
-    p.writeInt32(p_cur->GW_SignalStrength.bitErrorRate);
+static void responseRilSignalStrengthV11(Parcel &p, RIL_SignalStrength_v11 *p_cur) {
+    p.writeInt32(p_cur->GSM_SignalStrength.signalStrength);
+    p.writeInt32(p_cur->GSM_SignalStrength.bitErrorRate);
+    p.writeInt32(p_cur->WCDMA_SignalStrength.signalStrength);
+    p.writeInt32(p_cur->WCDMA_SignalStrength.bitErrorRate);
     p.writeInt32(p_cur->CDMA_SignalStrength.dbm);
     p.writeInt32(p_cur->CDMA_SignalStrength.ecio);
     p.writeInt32(p_cur->EVDO_SignalStrength.dbm);
     p.writeInt32(p_cur->EVDO_SignalStrength.ecio);
     p.writeInt32(p_cur->EVDO_SignalStrength.signalNoiseRatio);
-}
 
-static void responseRilSignalStrengthV6Extra(Parcel &p, RIL_SignalStrength_v10 *p_cur) {
     /*
      * Fixup LTE for backwards compatibility
      */
@@ -3341,12 +3346,22 @@ static void responseRilSignalStrengthV6Extra(Parcel &p, RIL_SignalStrength_v10 *
     p.writeInt32(p_cur->LTE_SignalStrength.rsrq);
     p.writeInt32(p_cur->LTE_SignalStrength.rssnr);
     p.writeInt32(p_cur->LTE_SignalStrength.cqi);
-}
+    p.writeInt32(p_cur->LTE_SignalStrength.timingAdvance);
 
-static void responseRilSignalStrengthV10(Parcel &p, RIL_SignalStrength_v10 *p_cur) {
-    responseRilSignalStrengthV5(p, p_cur);
-    responseRilSignalStrengthV6Extra(p, p_cur);
     p.writeInt32(p_cur->TD_SCDMA_SignalStrength.rscp);
+
+    if (p_cur->NR5G_SignalStrength.rsrp == -1*SHRT_MIN) {
+        p_cur->NR5G_SignalStrength.rsrp = INT_MAX;
+    }
+    if (p_cur->NR5G_SignalStrength.rsrq == -1*SHRT_MIN) {
+        p_cur->NR5G_SignalStrength.rsrq = INT_MAX;
+    }
+    if (p_cur->NR5G_SignalStrength.rssnr == -1*SHRT_MIN) {
+        p_cur->NR5G_SignalStrength.rssnr = INT_MAX;
+    }
+    p.writeInt32(p_cur->NR5G_SignalStrength.rsrp);
+    p.writeInt32(p_cur->NR5G_SignalStrength.rsrq);
+    p.writeInt32(p_cur->NR5G_SignalStrength.rssnr);
 }
 
 static int responseRilSignalStrength(Parcel &p,
@@ -3356,54 +3371,31 @@ static int responseRilSignalStrength(Parcel &p,
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
-    RIL_SignalStrength_v10 *p_cur;
-    if (s_callbacks.version <= LAST_IMPRECISE_RIL_VERSION) {
-        if (responselen >= sizeof (RIL_SignalStrength_v5)) {
-            p_cur = ((RIL_SignalStrength_v10 *) response);
-
-            responseRilSignalStrengthV5(p, p_cur);
-
-            if (responselen >= sizeof (RIL_SignalStrength_v6)) {
-                responseRilSignalStrengthV6Extra(p, p_cur);
-                if (responselen >= sizeof (RIL_SignalStrength_v10)) {
-                    p.writeInt32(p_cur->TD_SCDMA_SignalStrength.rscp);
-                } else {
-                    p.writeInt32(INT_MAX);
-                }
-            } else {
-                p.writeInt32(99);
-                p.writeInt32(INT_MAX);
-                p.writeInt32(INT_MAX);
-                p.writeInt32(INT_MAX);
-                p.writeInt32(INT_MAX);
-                p.writeInt32(INT_MAX);
-            }
-        } else {
-            RLOGE("invalid response length");
+    RIL_SignalStrength_v11 *p_cur;
+    if (responselen % sizeof(RIL_SignalStrength_v11) != 0) {
+        RLOGE("Data structure expected is RIL_SignalStrength_v11");
+        if (!isDebuggable()) {
             return RIL_ERRNO_INVALID_RESPONSE;
+        } else {
+            assert(0);
         }
-    } else { // RIL version >= 13
-        if (responselen % sizeof(RIL_SignalStrength_v10) != 0) {
-            RLOGE("Data structure expected is RIL_SignalStrength_v10");
-            if (!isDebuggable()) {
-                return RIL_ERRNO_INVALID_RESPONSE;
-            } else {
-                assert(0);
-            }
-        }
-        p_cur = ((RIL_SignalStrength_v10 *) response);
-        responseRilSignalStrengthV10(p, p_cur);
     }
+    p_cur = ((RIL_SignalStrength_v11 *) response);
+    responseRilSignalStrengthV11(p, p_cur);
     startResponse;
-    appendPrintBuf("%s[signalStrength=%d,bitErrorRate=%d,\
+    appendPrintBuf("%s[GSM_SS.signalStrength=%d,GSM_SS.bitErrorRate=%d,\
+            WCDMA_SS.signalStrength=%d,WCDMA_SS.ErrorRate=%d,\
             CDMA_SS.dbm=%d,CDMA_SSecio=%d,\
             EVDO_SS.dbm=%d,EVDO_SS.ecio=%d,\
             EVDO_SS.signalNoiseRatio=%d,\
             LTE_SS.signalStrength=%d,LTE_SS.rsrp=%d,LTE_SS.rsrq=%d,\
-            LTE_SS.rssnr=%d,LTE_SS.cqi=%d,TDSCDMA_SS.rscp=%d]",
+            LTE_SS.rssnr=%d,LTE_SS.cqi=%d,LTE_SS.timingAdvance=%d,TDSCDMA_SS.rssnr=%d,\
+            NR5G_SS.rsrp=%d,NR5G_SS.rsrq=%d,NR5G_SS.rsrp=%d]",
             printBuf,
-            p_cur->GW_SignalStrength.signalStrength,
-            p_cur->GW_SignalStrength.bitErrorRate,
+            p_cur->GSM_SignalStrength.signalStrength,
+            p_cur->GSM_SignalStrength.bitErrorRate,
+            p_cur->WCDMA_SignalStrength.signalStrength,
+            p_cur->WCDMA_SignalStrength.bitErrorRate,
             p_cur->CDMA_SignalStrength.dbm,
             p_cur->CDMA_SignalStrength.ecio,
             p_cur->EVDO_SignalStrength.dbm,
@@ -3414,7 +3406,11 @@ static int responseRilSignalStrength(Parcel &p,
             p_cur->LTE_SignalStrength.rsrq,
             p_cur->LTE_SignalStrength.rssnr,
             p_cur->LTE_SignalStrength.cqi,
-            p_cur->TD_SCDMA_SignalStrength.rscp);
+            p_cur->LTE_SignalStrength.timingAdvance,
+            p_cur->TD_SCDMA_SignalStrength.rscp,
+            p_cur->NR5G_SignalStrength.rsrp,
+            p_cur->NR5G_SignalStrength.rsrq,
+            p_cur->NR5G_SignalStrength.rssnr);
     closeResponse;
     return 0;
 }
