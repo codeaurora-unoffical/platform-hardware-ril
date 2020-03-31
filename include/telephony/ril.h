@@ -4565,6 +4565,29 @@ typedef struct {
  */
 #define RIL_REQUEST_CAF_SIM_OPEN_CHANNEL_WITH_P2 137
 
+/**
+ * RIL_REQUEST_STOP_NETWORK_SCAN
+ *
+ * Stops an ongoing network scan
+ *
+ * Request to stop the ongoing network scan. Since the modem can only perform one scan at a time,
+ * there is no parameter for this request.
+ *
+ * "data" is NULL
+ * "response" is NULL
+ *
+ * Valid errors:
+ *  SUCCESS
+ *  INTERNAL_ERR
+ *  MODEM_ERR
+ *  NO_MEMORY
+ *  NO_RESOURCES
+ *  CANCELLED
+ *  REQUEST_NOT_SUPPORTED
+ *
+ */
+#define RIL_REQUEST_STOP_NETWORK_SCAN 138
+
 /***********************************************************************/
 
 #define RIL_UNSOL_RESPONSE_BASE 1000

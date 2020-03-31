@@ -152,3 +152,4 @@
     {RIL_REQUEST_GET_ACTIVITY_INFO, dispatchVoid, responseActivityData},
     {RIL_REQUEST_SIM_GET_ATR, dispatchInts, responseString},
     {RIL_REQUEST_CAF_SIM_OPEN_CHANNEL_WITH_P2, dispatchOpenChannelWithP2, responseInts},
+    {RIL_REQUEST_STOP_NETWORK_SCAN, dispatchVoid, responseVoid},
