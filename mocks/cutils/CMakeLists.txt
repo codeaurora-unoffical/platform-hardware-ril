@@ -15,9 +15,9 @@ set( MOCK_CUTILS_SOURCES
         ril_config.c
         )
 
-if (NOT RIL_FOR_EXTERNAL_AP)
-    add_definitions(-DSOCKET_PATH_PREFIX="/dev/socket/ril/")
-endif (NOT RIL_FOR_EXTERNAL_AP)
+    if ((NOT DEFINED RIL_FOR_EXTERNAL_AP) OR (DEFINED TELUX_DEPRIVILEGE_ENABLED))
+     add_definitions(-DSOCKET_PATH_PREFIX="/dev/socket/ril/")
+ endif ((NOT DEFINED RIL_FOR_EXTERNAL_AP) OR (DEFINED TELUX_DEPRIVILEGE_ENABLED))
 
 # build library
 add_library ( ${TARGET_MOCK_LIBCUTILS} SHARED
