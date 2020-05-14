@@ -26,13 +26,13 @@
 #    IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 [Unit]
-Description=Ril2 Daemon
+Description=Rild2 Launcher
 After=chgrp-diag.service
 Before=rilmuxd2.service
 SourcePath=/etc/initscripts/rild_launcher.sh
 
 [Service]
-Restart=always
+Restart=on-failure
 Type=forking
 EnvironmentFile=/etc/tel.conf
 ExecStart=/etc/initscripts/rild_launcher.sh
