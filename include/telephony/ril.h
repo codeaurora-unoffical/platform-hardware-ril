@@ -5309,17 +5309,18 @@ typedef struct {
                                    NULL if no value. */
 } RIL_SimAuthentication;
 
+#define MAX_CONTENTS_LEN 255            /* Maximum size of PCO data contents in QMI*/
 typedef struct {
-    int cid;                    /* Context ID, uniquely identifies this call */
-    char *bearer_proto;         /* One of the PDP_type values in TS 27.007 section 10.1.1.
-                                   For example, "IP", "IPV6", "IPV4V6". */
-    int pco_id;                 /* The protocol ID for this box.  Note that only IDs from
-                                   FF00H - FFFFH are accepted.  If more than one is included
-                                   from the network, multiple calls should be made to send all
-                                   of them. */
-    int contents_length;        /* The number of octets in the contents. */
-    char *contents;             /* Carrier-defined content.  It is binary, opaque and
-                                   loosely defined in LTE Layer 3 spec 24.008 */
+    int cid;                            /* Context ID, uniquely identifies this call */
+    char *bearer_proto;                 /* One of the PDP_type values in TS 27.007 section 10.1.1.
+                                        For example, "IP", "IPV6", "IPV4V6". */
+    int pco_id;                         /* The protocol ID for this box.  Note that only IDs from
+                                        FF00H - FFFFH are accepted.  If more than one is included
+                                        from the network, multiple calls should be made to send all
+                                        of them. */
+    int contents_length;                /* The number of octets in the contents. */
+    uint8_t contents[MAX_CONTENTS_LEN]; /* Carrier-defined content.  It is binary, opaque and
+                                        loosely defined in LTE Layer 3 spec 24.008 */
 } RIL_PCO_Data;
 
 #ifdef RIL_SHLIB

@@ -5001,17 +5001,23 @@ static int responsePcoData(Parcel &p, void *response, size_t responselen) {
     return RIL_ERRNO_INVALID_RESPONSE;
   }
 
+  int contentsLimit;
   RIL_PCO_Data *p_cur = (RIL_PCO_Data *)response;
   p.writeInt32(p_cur->cid);
   writeStringToParcel(p, p_cur->bearer_proto);
   p.writeInt32(p_cur->pco_id);
   p.writeInt32(p_cur->contents_length);
-  writeStringToParcel(p, p_cur->contents);
+
+  contentsLimit= MIN((p_cur->contents_length), MAX_CONTENTS_LEN);
+  for(int i=0 ; i < contentsLimit; i++) {
+      p.write(&(p_cur->contents[i]),sizeof(uint8_t));
+  }
 
   startResponse;
-  appendPrintBuf("cid %d, bearer_proto %s pco_id %d length %d %s",
+
+  appendPrintBuf("cid %d, bearer_proto %s pco_id %d length %d",
                  p_cur->cid, (char*)p_cur->bearer_proto, p_cur->pco_id,
-                 p_cur->contents_length, (char*) p_cur->contents);
+                 p_cur->contents_length);
   closeResponse;
 
   return 0;
